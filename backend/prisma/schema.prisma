@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MHP
+  CHW
+  FAMILY
+  ADMIN
+}
+
+model User {
+  id               Int         @id @default(autoincrement())
+  fullName         String
+  email            String      @unique
+  password         String
+  phone            String?
+  role             UserRole    @default(CHW)
+  workplace        String?
+  district         String?
+  sector           String?
+  cell             String?
+  village          String?
+  assignedPatients   Patient[]  @relation("PatientCHW")
+  familyPatients     Patient[]  @relation("PatientFamily")
+  registeredPatients Patient[]  @relation("PatientMHP")
+  followups           Followup[]
+  notifications       Notification[]
+  systemLogs          SystemLog[]
+  reportsSubmitted    Report[]   @relation("ReportByCHW")
+  reportsReceived     Report[]   @relation("ReportForMHP")
+  otpCode             String?
+  otpExpiry           DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+}
+
+model Patient {
+  id                Int         @id @default(autoincrement())
+  fullName          String
+  age               Int?
+  gender            String
+  contact           String?
+  diagnosis         String?
+  status            String      @default("Stable")
+  riskLevel         String      @default("Low")
+  photoUrl          String?
+  tracked           Boolean     @default(false)
+  district          String?
+  sector            String?
+  cell              String?
+  village           String?
+
+  registeredByMhpId Int?
+  assignedChwId     Int?
+  assignedFamilyId  Int?
+
+  registeredByMhp   User?       @relation("PatientMHP", fields: [registeredByMhpId], references: [id])
+  assignedChw       User?       @relation("PatientCHW", fields: [assignedChwId], references: [id])
+  assignedFamily    User?       @relation("PatientFamily", fields: [assignedFamilyId], references: [id])
+
+  followups         Followup[]
+  reminders         Reminder[]
+  treatmentChanges  TreatmentChange[]
+  reports           Report[]    @relation("PatientReports")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Followup {
+  id           Int      @id @default(autoincrement())
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  patientId    Int
+  createdBy    User?     @relation(fields: [createdById], references: [id])
+  createdById  Int?
+  mentalStatus String
+  notes        String
+  relapseSigns Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String
+  title     String
+  message   String
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Reminder {
+  id        Int      @id @default(autoincrement())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  patientId Int
+  type      String
+  title     String
+  time      String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model TreatmentChange {
+  id          Int      @id @default(autoincrement())
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  patientId   Int
+  change      String
+  changedBy   String?
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id            Int      @id @default(autoincrement())
+  patientId     Int
+  patient       Patient  @relation("PatientReports", fields: [patientId], references: [id])
+  createdByChwId Int
+  createdByChw  User     @relation("ReportByCHW", fields: [createdByChwId], references: [id])
+  mhpId         Int?
+  mhp           User?    @relation("ReportForMHP", fields: [mhpId], references: [id])
+  title         String
+  details       String
+  createdAt     DateTime @default(now())
+}
+
+model SystemLog {
+  id        Int      @id @default(autoincrement())
+  event     String
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+

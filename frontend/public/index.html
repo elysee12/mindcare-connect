@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="theme-color" content="#2EB67D" />
+
+    <title>Mindcare Connect</title>
+    <meta name="description" content="Mindcare Connect - patient alerts, reminders, and reports in one modern healthcare dashboard." />
+    <meta name="keywords" content="Mindcare, healthcare, patient management, reminders, alerts, reports" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Mindcare Connect" />
+    <meta property="og:description" content="A connected healthcare dashboard built with Expo Router for web, iOS, and Android." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://your-domain.example" />
+    <meta property="og:image" content="./assets/images/icon.png" />
+
+    <!-- Apple / PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Mindcare Connect" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Netlify SPA redirect support -->
+    <meta name="prerender-status-code" content="200" />
+
+    <!-- Default font fallback for quick load -->
+    <style>
+      body, html { margin: 0; width: 100%; height: 100%; }
+      #root { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="root">Loading Mindcare Connect...</div>
+
+    <!-- Bundled script injection by Expo / Metro on web build -->
+    <script>
+      // Fallback redirect for client-side router (e.g., static deploys)
+      if (!window.location.pathname.includes('index.html') && window.location.pathname === '/') {
+        history.replaceState(null, '', '/');
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,710 @@
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, Alert, Modal } from 'react-native';
+import { Container, Card, Input, Button } from '@/components/ui';
+import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
+import { Ionicons } from '@expo/vector-icons';
+import { api } from '@/lib/api';
+import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
+
+export default function RegisterPatient() {
+  const router = useRouter();
+  const { user: currentUser } = useAuth();
+  const { patientId, edit, userId } = useLocalSearchParams<{ patientId?: string; edit?: string; userId?: string }>();
+  const isEdit = edit === '1' && patientId;
+
+  const [patientIdState, setPatientId] = useState('P001');
+  const [nextPatientNum, setNextPatientNum] = useState(2);
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [contact, setContact] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [status, setStatus] = useState('Stable');
+  const [riskLevel, setRiskLevel] = useState('Low');
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [assignedChw, setAssignedChw] = useState('');
+  const [assignedFamily, setAssignedFamily] = useState('');
+  const [familyName, setFamilyName] = useState('');
+  const [familyEmail, setFamilyEmail] = useState('');
+  const [familyPhone, setFamilyPhone] = useState('');
+  const [familyDistrict, setFamilyDistrict] = useState('');
+  const [familySector, setFamilySector] = useState('');
+  const [familyCell, setFamilyCell] = useState('');
+  const [familyVillage, setFamilyVillage] = useState('');
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [district, setDistrict] = useState('');
+  const [sector, setSector] = useState('');
+  const [cell, setCell] = useState('');
+  const [village, setVillage] = useState('');
+  const [showChwDropdown, setShowChwDropdown] = useState(false);
+  const [showFamilyDistrictDropdown, setShowFamilyDistrictDropdown] = useState(false);
+  const [showFamilySectorDropdown, setShowFamilySectorDropdown] = useState(false);
+  const [showFamilyCellDropdown, setShowFamilyCellDropdown] = useState(false);
+  const [showFamilyVillageDropdown, setShowFamilyVillageDropdown] = useState(false);
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
+  const [showSectorDropdown, setShowSectorDropdown] = useState(false);
+  const [showCellDropdown, setShowCellDropdown] = useState(false);
+  const [showVillageDropdown, setShowVillageDropdown] = useState(false);
+  const [chwList, setChwList] = useState<any[]>([]);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchChws = async () => {
+      try {
+        const chws = await api.users(undefined, 'CHW');
+        setChwList(chws);
+      } catch (error) {
+        console.error('Failed to fetch CHWs', error);
+      }
+    };
+    fetchChws();
+    if (isEdit && patientId) {
+      loadPatientData(patientId);
+    }
+  }, [isEdit, patientId]);
+
+  const loadPatientData = async (id: string) => {
+    try {
+      const patient = await api.patientById(id);
+      setName(patient.fullName || '');
+      setAge(String(patient.age || ''));
+      setGender(patient.gender || '');
+      setContact(patient.contact || '');
+      setDiagnosis(patient.diagnosis || '');
+      setStatus(patient.status || 'Stable');
+      setRiskLevel(patient.riskLevel || 'Low');
+      setDistrict(patient.district || '');
+      setSector(patient.sector || '');
+      setCell(patient.cell || '');
+      setVillage(patient.village || '');
+      setAssignedChw(patient.assignedChwId || '');
+      setAssignedFamily(patient.assignedFamilyId || '');
+      setSelectedImageUri(patient.photoUrl || null); // Load existing photo
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load patient data');
+    }
+  };
+
+  // Options
+  const chwOptions = chwList.map(chw => ({ label: `${chw.fullName} (${chw.village})`, value: chw.id }));
+  const districts = ['Gasabo', 'Kicukiro', 'Nyarugenge'];
+  const sectors = ['Remera', 'Kacyiru', 'Kimisagara'];
+  const cells = ['Cell A', 'Cell B', 'Cell C'];
+  const villages = ['Village 1', 'Village 2', 'Village 3'];
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera roll permissions are required to select an image.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setSelectedImageUri(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri: string): Promise<string | null> => {
+    try {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: `patient-${Date.now()}.jpg`,
+      } as any);
+
+      // Use the same backend URL as other API calls
+      const backendUrl = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.68.59.24:3000');
+
+      const uploadResponse = await fetch(`${backendUrl}/api/upload`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'x-user-id': currentUser?.id || '',
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      return uploadResult.url;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      return null;
+    }
+  };
+
+  const savePatient = async () => {
+    if (!name || !age || !gender) {
+      Alert.alert('Validation Error', 'Please enter required fields: name, age, and gender.');
+      return;
+    }
+
+    setIsLoading(true);
+    setStatusMessage('Saving patient...');
+
+    try {
+      let photoUrl = selectedImageUri;
+
+      // If it's a local URI, upload it first
+      if (selectedImageUri && selectedImageUri.startsWith('file://')) {
+        setStatusMessage('Uploading image...');
+        const uploadedUrl = await uploadImage(selectedImageUri);
+        if (uploadedUrl) {
+          photoUrl = uploadedUrl;
+        } else {
+          // If upload fails, we might want to ask if they want to continue without photo
+          // For now, let's just log and continue as per original logic but more robust
+          console.warn('Image upload failed, using original URI or null');
+        }
+      }
+
+      const payload: any = {
+        fullName: name,
+        age: Number(age),
+        gender,
+        contact,
+        diagnosis,
+        status,
+        riskLevel,
+        district,
+        sector,
+        cell,
+        village,
+        photoUrl,
+      };
+
+      if (assignedChw) {
+        payload.assignedChwId = Number(assignedChw);
+      }
+      
+      if (assignedFamily && assignedFamily !== 'None') {
+        payload.assignedFamilyId = Number(assignedFamily);
+      }
+
+      if (isEdit && patientId) {
+        await api.updatePatient(patientId, payload);
+        setStatusMessage(`Patient ${name} updated successfully.`);
+      } else {
+        await api.createPatient(payload);
+        setStatusMessage(`Patient ${name} created successfully.`);
+      }
+
+      setTimeout(() => {
+        setStatusMessage('');
+        setIsLoading(false);
+        if (!isEdit) {
+          setName('');
+          setAge('');
+          setGender('');
+          setContact('');
+          setDiagnosis('');
+          setStatus('Stable');
+          setRiskLevel('Low');
+          setDistrict('');
+          setSector('');
+          setCell('');
+          setVillage('');
+          setAssignedChw('');
+          setAssignedFamily('');
+          setFamilyName('');
+          setFamilyEmail('');
+          setFamilyPhone('');
+          setFamilyDistrict('');
+          setFamilySector('');
+          setFamilyCell('');
+          setFamilyVillage('');
+          setSelectedImageUri(null);
+        }
+        router.back();
+      }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      setStatusMessage('');
+      const errorMessage = error.message || 'Failed to save patient. Please check your connection and try again.';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  const saveFamilyMember = async () => {
+    if (!familyName || !familyEmail || !familyPhone) {
+      Alert.alert('Validation Error', 'Please provide family member name, email, and phone.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        fullName: familyName,
+        email: familyEmail,
+        password: 'Family@123',
+        role: 'FAMILY',
+        phone: familyPhone,
+        district: familyDistrict,
+        sector: familySector,
+        cell: familyCell,
+        village: familyVillage,
+      };
+      const savedFamily = await api.createUser(payload);
+      setAssignedFamily(String(savedFamily.id));
+      setShowFamilyModal(false);
+      setIsLoading(false);
+      Alert.alert('Success', `Family member ${savedFamily.fullName} registered and assigned.`);
+    } catch (error: any) {
+      setIsLoading(false);
+      const errorMessage = error.message || 'Failed to save family member.';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  return (
+    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
+      <View style={styles.headbar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>{isEdit ? 'Edit Patient' : 'Register Patient'}</Text>
+        <Text style={styles.subtitle}>{isEdit ? 'Update patient details' : 'Add patient details to the care network'}</Text>
+
+        <Card style={styles.card} variant="elevated">
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Full Name</Text>
+            <Input placeholder="Full Name" value={name} onChangeText={setName} autoCapitalize="words" />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Age</Text>
+            <Input placeholder="Age" value={age} onChangeText={setAge} keyboardType="numeric" />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Gender</Text>
+            <View style={styles.radioGroup}>
+              <TouchableOpacity
+                style={[
+                  styles.radioButton,
+                  gender === 'Male' && styles.radioButtonSelected,
+                ]}
+                onPress={() => setGender('Male')}
+              >
+                <View
+                  style={[
+                    styles.radioCircle,
+                    gender === 'Male' && styles.radioCircleSelected,
+                  ]}
+                />
+                <Text style={styles.radioButtonText}>Male</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.radioButton,
+                  gender === 'Female' && styles.radioButtonSelected,
+                ]}
+                onPress={() => setGender('Female')}
+              >
+                <View
+                  style={[
+                    styles.radioCircle,
+                    gender === 'Female' && styles.radioCircleSelected,
+                  ]}
+                />
+                <Text style={styles.radioButtonText}>Female</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Contact Number (Optional)</Text>
+            <Input placeholder="Contact Number" value={contact} onChangeText={setContact} keyboardType="phone-pad" />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Diagnosis</Text>
+            <Input placeholder="Diagnosis" value={diagnosis} onChangeText={setDiagnosis} />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Status</Text>
+            <Input placeholder="Status" value={status} onChangeText={setStatus} />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Risk Level</Text>
+            <Input placeholder="Risk Level" value={riskLevel} onChangeText={setRiskLevel} />
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Profile Photo</Text>
+            <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+              <Ionicons name="camera" size={24} color={colors.primary} />
+              <Text style={styles.uploadButtonText}>Select Photo</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.imagePreviewWrapper}>
+            <Text style={styles.fieldLabel}>Profile Preview</Text>
+            <View style={styles.imagePreviewBox}>
+              <Image source={{ uri: selectedImageUri || 'https://via.placeholder.com/120' }} style={styles.imagePreview} />
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Address</Text>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>District</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowDistrictDropdown(!showDistrictDropdown)}>
+              <Text style={styles.dropdownText}>{district || 'Select District'}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showDistrictDropdown && (
+              <View style={styles.dropdownOptions}>
+                {districts.map((d) => (
+                  <TouchableOpacity key={d} style={styles.dropdownOption} onPress={() => { setDistrict(d); setShowDistrictDropdown(false); }}>
+                    <Text style={styles.dropdownOptionText}>{d}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Sector</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowSectorDropdown(!showSectorDropdown)}>
+              <Text style={styles.dropdownText}>{sector || 'Select Sector'}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showSectorDropdown && (
+              <View style={styles.dropdownOptions}>
+                {sectors.map((s) => (
+                  <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setSector(s); setShowSectorDropdown(false); }}>
+                    <Text style={styles.dropdownOptionText}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Cell</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowCellDropdown(!showCellDropdown)}>
+              <Text style={styles.dropdownText}>{cell || 'Select Cell'}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showCellDropdown && (
+              <View style={styles.dropdownOptions}>
+                {cells.map((c) => (
+                  <TouchableOpacity key={c} style={styles.dropdownOption} onPress={() => { setCell(c); setShowCellDropdown(false); }}>
+                    <Text style={styles.dropdownOptionText}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Village</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowVillageDropdown(!showVillageDropdown)}>
+              <Text style={styles.dropdownText}>{village || 'Select Village'}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showVillageDropdown && (
+              <View style={styles.dropdownOptions}>
+                {villages.map((v) => (
+                  <TouchableOpacity key={v} style={styles.dropdownOption} onPress={() => { setVillage(v); setShowVillageDropdown(false); }}>
+                    <Text style={styles.dropdownOptionText}>{v}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.sectionTitle}>Assign Help</Text>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Assign CHW (Optional)</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setShowChwDropdown(!showChwDropdown)}>
+              <Text style={styles.dropdownText}>{assignedChw || 'Select CHW'}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showChwDropdown && (
+              <View style={styles.dropdownOptions}>
+                {chwOptions.map((chw) => (
+                  <TouchableOpacity key={chw.value} style={styles.dropdownOption} onPress={() => { setAssignedChw(chw.value); setShowChwDropdown(false); }}>
+                    <Text style={styles.dropdownOptionText}>{chw.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Assign Family Member (Optional)</Text>
+            <Button
+              variant="secondary"
+              onPress={() => setShowFamilyModal(true)}
+              size="md"
+            >
+              {assignedFamily ? 'Edit Family Member' : 'Add Family Member'}
+            </Button>
+            {assignedFamily ? (
+              <Text style={[styles.patientDetail, { marginTop: spacing.xs }]}>Assigned: {familyName || assignedFamily}</Text>
+            ) : null}
+          </View>
+
+          <Modal transparent animationType="slide" visible={showFamilyModal} onRequestClose={() => setShowFamilyModal(false)}>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.sectionTitle}>Family Member Details</Text>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Full Name</Text>
+                  <Input placeholder="Full Name" value={familyName} onChangeText={setFamilyName} autoCapitalize="words" />
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Email</Text>
+                  <Input placeholder="Email" value={familyEmail} onChangeText={setFamilyEmail} keyboardType="email-address" />
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Phone</Text>
+                  <Input placeholder="Phone" value={familyPhone} onChangeText={setFamilyPhone} keyboardType="phone-pad" />
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>District</Text>
+                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyDistrictDropdown(!showFamilyDistrictDropdown)}>
+                    <Text style={styles.dropdownText}>{familyDistrict || 'Select District'}</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {showFamilyDistrictDropdown && (
+                    <View style={styles.dropdownOptions}>
+                      {districts.map((d) => (
+                        <TouchableOpacity key={d} style={styles.dropdownOption} onPress={() => { setFamilyDistrict(d); setShowFamilyDistrictDropdown(false); }}>
+                          <Text style={styles.dropdownOptionText}>{d}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Sector</Text>
+                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilySectorDropdown(!showFamilySectorDropdown)}>
+                    <Text style={styles.dropdownText}>{familySector || 'Select Sector'}</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {showFamilySectorDropdown && (
+                    <View style={styles.dropdownOptions}>
+                      {sectors.map((s) => (
+                        <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setFamilySector(s); setShowFamilySectorDropdown(false); }}>
+                          <Text style={styles.dropdownOptionText}>{s}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Cell</Text>
+                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyCellDropdown(!showFamilyCellDropdown)}>
+                    <Text style={styles.dropdownText}>{familyCell || 'Select Cell'}</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {showFamilyCellDropdown && (
+                    <View style={styles.dropdownOptions}>
+                      {cells.map((c) => (
+                        <TouchableOpacity key={c} style={styles.dropdownOption} onPress={() => { setFamilyCell(c); setShowFamilyCellDropdown(false); }}>
+                          <Text style={styles.dropdownOptionText}>{c}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Village</Text>
+                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyVillageDropdown(!showFamilyVillageDropdown)}>
+                    <Text style={styles.dropdownText}>{familyVillage || 'Select Village'}</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {showFamilyVillageDropdown && (
+                    <View style={styles.dropdownOptions}>
+                      {villages.map((v) => (
+                        <TouchableOpacity key={v} style={styles.dropdownOption} onPress={() => { setFamilyVillage(v); setShowFamilyVillageDropdown(false); }}>
+                          <Text style={styles.dropdownOptionText}>{v}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.buttonWrapper}>
+                  <Button variant="primary" onPress={saveFamilyMember} disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save Family Member'}
+                  </Button>
+                  <Button variant="ghost" onPress={() => setShowFamilyModal(false)} disabled={isLoading}>Cancel</Button>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          <View style={styles.buttonWrapper}>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onPress={savePatient}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Processing...' : (isEdit ? 'Update Patient' : 'Register Patient')}
+            </Button>
+          </View>
+        </Card>
+
+        {statusMessage ? (
+          <View style={styles.toast}>
+            <Text style={styles.toastText}>{statusMessage}</Text>
+          </View>
+        ) : null}
+      </ScrollView>
+    </Container>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { backgroundColor: colors.backgroundSecondary, flex: 1 },
+  headbar: { padding: spacing.md, backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  backText: { ...typography.body, color: colors.primary, marginLeft: spacing.xs },
+  content: { padding: spacing.lg, gap: spacing.sm },
+  title: { ...typography.h2, color: colors.primaryDark, marginBottom: spacing.xs },
+  subtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
+  card: { padding: spacing.md, borderRadius: borderRadius.xl, ...shadows.sm },
+  fieldWrapper: { marginBottom: spacing.md },
+  fieldLabel: { ...typography.captionBold, color: colors.textSecondary, marginBottom: spacing.xs },
+  radioGroup: { flexDirection: 'row', gap: spacing.sm },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    backgroundColor: colors.background,
+    gap: spacing.xs,
+  },
+  radioButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  radioCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  radioCircleSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  radioButtonText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background,
+    gap: spacing.sm,
+  },
+  uploadButtonText: { ...typography.body, color: colors.primary },
+  imagePreviewWrapper: { marginBottom: spacing.md },
+  imagePreviewBox: { width: '100%', height: 120, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  imagePreview: { width: '100%', height: '100%' },
+  sectionTitle: { ...typography.h3, color: colors.primaryDark, marginTop: spacing.lg, marginBottom: spacing.md },
+  subSectionTitle: { ...typography.bodyBold, color: colors.primaryDark, marginTop: spacing.md, marginBottom: spacing.sm },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.md },
+  modalContent: { width: '100%', maxWidth: 560, backgroundColor: colors.background, borderRadius: borderRadius.lg, padding: spacing.md },
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background,
+  },
+  dropdownText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  dropdownOptions: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    zIndex: 10,
+    maxHeight: 150,
+  },
+  dropdownOption: {
+    padding: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  dropdownOptionText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  button: { marginTop: spacing.md },
+  buttonWrapper: { marginTop: spacing.md },
+  toast: {
+    position: 'absolute',
+    bottom: 32,
+    left: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.primary,
+    padding: spacing.sm,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  toastText: {
+    ...typography.captionBold,
+    color: colors.white,
+  },
+});
