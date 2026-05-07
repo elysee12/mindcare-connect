@@ -32,7 +32,7 @@ export class UploadController {
       throw new BadRequestException('No file provided');
     }
 
-    const baseUrl = process.env.BACKEND_URL || 'http://10.202.102.24:3000';
+    const baseUrl = process.env.BACKEND_URL || 'https://mindcare-connect.onrender.com';
     return {
       filename: file.filename,
       originalname: file.originalname,
@@ -50,7 +50,7 @@ export class UploadController {
       throw new BadRequestException('No files provided');
     }
 
-    const baseUrl = process.env.BACKEND_URL || 'http://10.202.102.24:3000';
+    const baseUrl = process.env.BACKEND_URL || 'https://mindcare-connect.onrender.com';
     return files.map((file) => ({
       filename: file.filename,
       originalname: file.originalname,

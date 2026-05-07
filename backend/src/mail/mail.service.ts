@@ -45,7 +45,10 @@ export class MailService implements OnModuleInit {
         user,
         pass,
       },
-    });
+      // Force IPv4 to avoid ENETUNREACH errors on cloud platforms like Render
+      // which often have issues with IPv6 SMTP routing.
+      ...(host.includes('gmail.com') || host.includes('googlemail.com') ? { family: 4 } : {}),
+    } as any);
 
     // Verify connection configuration
     try {

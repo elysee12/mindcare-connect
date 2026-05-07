@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
-// Backend URL using PC's local IP for phone/emulator access
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.202.102.24:3000') + '/api';
+// Backend URL using Render production URL
+const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com') + '/api';
 
 let authUserId: string | null = null;
 
