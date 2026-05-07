@@ -7,6 +7,7 @@ export class CreateUserDto {
   phone?: string;
   role?: UserRole;
   workplace?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;

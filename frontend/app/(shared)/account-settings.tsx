@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Container, Card, Button, Input } from '@/components/ui';
+import { Container, Card, Button, Input, LocationPicker } from '@/components/ui';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +31,7 @@ export default function AccountSettings() {
     email: '',
     phone: '',
     workplace: '',
+    province: '',
     district: '',
     sector: '',
     cell: '',
@@ -67,6 +68,7 @@ export default function AccountSettings() {
         email: source.email || '',
         phone: source.phone || '',
         workplace: source.workplace || '',
+        province: (source as any).province || '',
         district: source.district || '',
         sector: source.sector || '',
         cell: source.cell || '',
@@ -113,6 +115,7 @@ export default function AccountSettings() {
           email: updatedUser.email,
           phone: updatedUser.phone,
           workplace: updatedUser.workplace,
+          province: updatedUser.province,
           district: updatedUser.district,
           sector: updatedUser.sector,
           cell: updatedUser.cell,
@@ -188,6 +191,7 @@ export default function AccountSettings() {
         email: profileValues.email.trim(),
         phone: profileValues.phone.trim() || undefined,
         workplace: profileValues.workplace.trim() || undefined,
+        province: profileValues.province.trim() || undefined,
         district: profileValues.district.trim() || undefined,
         sector: profileValues.sector.trim() || undefined,
         cell: profileValues.cell.trim() || undefined,
@@ -414,38 +418,18 @@ export default function AccountSettings() {
         {(currentRole === 'chw' || currentRole === 'family') && (
           <>
             <Text style={styles.sectionTitle}>Location Information</Text>
-            <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>District</Text>
-              <Input
-                value={profileValues.district}
-                onChangeText={(value) => setProfileValues((prev) => ({ ...prev, district: value }))}
-                clearable
-              />
-            </View>
-            <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>Sector</Text>
-              <Input
-                value={profileValues.sector}
-                onChangeText={(value) => setProfileValues((prev) => ({ ...prev, sector: value }))}
-                clearable
-              />
-            </View>
-            <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>Cell</Text>
-              <Input
-                value={profileValues.cell}
-                onChangeText={(value) => setProfileValues((prev) => ({ ...prev, cell: value }))}
-                clearable
-              />
-            </View>
-            <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>Village</Text>
-              <Input
-                value={profileValues.village}
-                onChangeText={(value) => setProfileValues((prev) => ({ ...prev, village: value }))}
-                clearable
-              />
-            </View>
+            <LocationPicker
+              province={profileValues.province}
+              district={profileValues.district}
+              sector={profileValues.sector}
+              cell={profileValues.cell}
+              village={profileValues.village}
+              onProvinceChange={(value) => setProfileValues((prev) => ({ ...prev, province: value }))}
+              onDistrictChange={(value) => setProfileValues((prev) => ({ ...prev, district: value }))}
+              onSectorChange={(value) => setProfileValues((prev) => ({ ...prev, sector: value }))}
+              onCellChange={(value) => setProfileValues((prev) => ({ ...prev, cell: value }))}
+              onVillageChange={(value) => setProfileValues((prev) => ({ ...prev, village: value }))}
+            />
           </>
         )}
 

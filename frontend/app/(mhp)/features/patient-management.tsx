@@ -59,7 +59,7 @@ export default function PatientManagement() {
   };
 
   const handleViewDetails = (patient: any) => {
-    const address = `${patient.district || 'N/A'}, ${patient.sector || 'N/A'}, ${patient.cell || 'N/A'}, ${patient.village || 'N/A'}`;
+    const address = `${patient.province || 'N/A'}, ${patient.district || 'N/A'}, ${patient.sector || 'N/A'}, ${patient.cell || 'N/A'}, ${patient.village || 'N/A'}`;
     const detailLines = [
       `ID: ${formatPatientId(patient.id)}`,
       `Name: ${patient.fullName || patient.full_name || patient.name || 'N/A'}`,
@@ -130,7 +130,8 @@ export default function PatientManagement() {
                       <Text style={styles.patientDetail}>Age: {patient.age ?? 'N/A'}</Text>
                       <Text style={styles.patientDetail}>Gender: {patient.gender || 'N/A'}</Text>
                       {patient.contact ? <Text style={styles.patientDetail}>Phone: {patient.contact}</Text> : <Text style={styles.patientDetail}>(Phone optional)</Text>}
-                      <Text style={styles.patientDetail}>Location: {patient.district || 'N/A'}, {patient.sector || 'N/A'}</Text>
+                      <Text style={styles.patientDetail}>Location: {patient.province || 'N/A'}, {patient.district || 'N/A'}</Text>
+                      <Text style={styles.patientDetail}>CHW: {patient.assignedChw?.fullName || 'None'}</Text>
                       {patient.diagnosis ? <Text style={styles.patientDetail}>Diagnosis: {patient.diagnosis}</Text> : null}
                     </View>
                   </View>

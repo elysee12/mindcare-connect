@@ -52,13 +52,15 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async remove(@Param('id') id: string, @Req() req) {
     const user = await this.userService.findOne(+id);
-    await this.userService.remove(+id);
-    await this.notificationService.create({
-      type: 'user_deleted',
-      title: 'User Deleted',
-      message: `User ${user.fullName} has been deleted.`,
-      userId: req.user.id,
-    });
+    if (user) {
+      await this.userService.remove(+id);
+      await this.notificationService.create({
+        type: 'user_deleted',
+        title: 'User Deleted',
+        message: `User ${user.fullName} has been deleted.`,
+        userId: req.user.id,
+      });
+    }
     return { message: 'User deleted successfully' };
   }
 }

@@ -15,6 +15,7 @@ interface User {
   role: string;
   phone: string;
   workplace?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;
@@ -111,6 +112,7 @@ export default function UserManagement() {
                 <Text style={styles.userEmail}>{user.email}</Text>
                 <Text style={styles.userPhone}>{user.phone}</Text>
                 {user.workplace && <Text style={styles.userDetail}>Workplace: {user.workplace}</Text>}
+                {user.province && <Text style={styles.userDetail}>Province: {user.province}</Text>}
                 {user.district && <Text style={styles.userDetail}>District: {user.district}</Text>}
                 {user.sector && <Text style={styles.userDetail}>Sector: {user.sector}</Text>}
                 {user.cell && <Text style={styles.userDetail}>Cell: {user.cell}</Text>}

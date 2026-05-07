@@ -7,6 +7,7 @@ export class CreatePatientDto {
   status?: string;
   riskLevel?: string;
   photoUrl?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;

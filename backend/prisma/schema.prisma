@@ -28,6 +28,7 @@ model User {
   phone            String?
   role             UserRole    @default(CHW)
   workplace        String?
+  province         String?
   district         String?
   sector           String?
   cell             String?
@@ -57,6 +58,7 @@ model Patient {
   riskLevel         String      @default("Low")
   photoUrl          String?
   tracked           Boolean     @default(false)
+  province          String?
   district          String?
   sector            String?
   cell              String?

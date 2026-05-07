@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, Alert, Modal } from 'react-native';
-import { Container, Card, Input, Button } from '@/components/ui';
+import { Container, Card, Input, Button, LocationPicker } from '@/components/ui';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,24 +30,18 @@ export default function RegisterPatient() {
   const [familyName, setFamilyName] = useState('');
   const [familyEmail, setFamilyEmail] = useState('');
   const [familyPhone, setFamilyPhone] = useState('');
+  const [familyProvince, setFamilyProvince] = useState('');
   const [familyDistrict, setFamilyDistrict] = useState('');
   const [familySector, setFamilySector] = useState('');
   const [familyCell, setFamilyCell] = useState('');
   const [familyVillage, setFamilyVillage] = useState('');
   const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [sector, setSector] = useState('');
   const [cell, setCell] = useState('');
   const [village, setVillage] = useState('');
   const [showChwDropdown, setShowChwDropdown] = useState(false);
-  const [showFamilyDistrictDropdown, setShowFamilyDistrictDropdown] = useState(false);
-  const [showFamilySectorDropdown, setShowFamilySectorDropdown] = useState(false);
-  const [showFamilyCellDropdown, setShowFamilyCellDropdown] = useState(false);
-  const [showFamilyVillageDropdown, setShowFamilyVillageDropdown] = useState(false);
-  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
-  const [showSectorDropdown, setShowSectorDropdown] = useState(false);
-  const [showCellDropdown, setShowCellDropdown] = useState(false);
-  const [showVillageDropdown, setShowVillageDropdown] = useState(false);
   const [chwList, setChwList] = useState<any[]>([]);
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +71,7 @@ export default function RegisterPatient() {
       setDiagnosis(patient.diagnosis || '');
       setStatus(patient.status || 'Stable');
       setRiskLevel(patient.riskLevel || 'Low');
+      setProvince(patient.province || '');
       setDistrict(patient.district || '');
       setSector(patient.sector || '');
       setCell(patient.cell || '');
@@ -91,10 +86,6 @@ export default function RegisterPatient() {
 
   // Options
   const chwOptions = chwList.map(chw => ({ label: `${chw.fullName} (${chw.village})`, value: chw.id }));
-  const districts = ['Gasabo', 'Kicukiro', 'Nyarugenge'];
-  const sectors = ['Remera', 'Kacyiru', 'Kimisagara'];
-  const cells = ['Cell A', 'Cell B', 'Cell C'];
-  const villages = ['Village 1', 'Village 2', 'Village 3'];
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -128,7 +119,7 @@ export default function RegisterPatient() {
       } as any);
 
       // Use the same backend URL as other API calls
-      const backendUrl = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.68.59.24:3000');
+      const backendUrl = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.202.102.24:3000');
 
       const uploadResponse = await fetch(`${backendUrl}/api/upload`, {
         method: 'POST',
@@ -183,6 +174,7 @@ export default function RegisterPatient() {
         diagnosis,
         status,
         riskLevel,
+        province,
         district,
         sector,
         cell,
@@ -217,6 +209,7 @@ export default function RegisterPatient() {
           setDiagnosis('');
           setStatus('Stable');
           setRiskLevel('Low');
+          setProvince('');
           setDistrict('');
           setSector('');
           setCell('');
@@ -226,6 +219,7 @@ export default function RegisterPatient() {
           setFamilyName('');
           setFamilyEmail('');
           setFamilyPhone('');
+          setFamilyProvince('');
           setFamilyDistrict('');
           setFamilySector('');
           setFamilyCell('');
@@ -256,6 +250,7 @@ export default function RegisterPatient() {
         password: 'Family@123',
         role: 'FAMILY',
         phone: familyPhone,
+        province: familyProvince,
         district: familyDistrict,
         sector: familySector,
         cell: familyCell,
@@ -371,73 +366,18 @@ export default function RegisterPatient() {
 
           <Text style={styles.sectionTitle}>Address</Text>
 
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>District</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setShowDistrictDropdown(!showDistrictDropdown)}>
-              <Text style={styles.dropdownText}>{district || 'Select District'}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showDistrictDropdown && (
-              <View style={styles.dropdownOptions}>
-                {districts.map((d) => (
-                  <TouchableOpacity key={d} style={styles.dropdownOption} onPress={() => { setDistrict(d); setShowDistrictDropdown(false); }}>
-                    <Text style={styles.dropdownOptionText}>{d}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Sector</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setShowSectorDropdown(!showSectorDropdown)}>
-              <Text style={styles.dropdownText}>{sector || 'Select Sector'}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showSectorDropdown && (
-              <View style={styles.dropdownOptions}>
-                {sectors.map((s) => (
-                  <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setSector(s); setShowSectorDropdown(false); }}>
-                    <Text style={styles.dropdownOptionText}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Cell</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setShowCellDropdown(!showCellDropdown)}>
-              <Text style={styles.dropdownText}>{cell || 'Select Cell'}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showCellDropdown && (
-              <View style={styles.dropdownOptions}>
-                {cells.map((c) => (
-                  <TouchableOpacity key={c} style={styles.dropdownOption} onPress={() => { setCell(c); setShowCellDropdown(false); }}>
-                    <Text style={styles.dropdownOptionText}>{c}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Village</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setShowVillageDropdown(!showVillageDropdown)}>
-              <Text style={styles.dropdownText}>{village || 'Select Village'}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showVillageDropdown && (
-              <View style={styles.dropdownOptions}>
-                {villages.map((v) => (
-                  <TouchableOpacity key={v} style={styles.dropdownOption} onPress={() => { setVillage(v); setShowVillageDropdown(false); }}>
-                    <Text style={styles.dropdownOptionText}>{v}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
+          <LocationPicker
+            province={province}
+            district={district}
+            sector={sector}
+            cell={cell}
+            village={village}
+            onProvinceChange={setProvince}
+            onDistrictChange={setDistrict}
+            onSectorChange={setSector}
+            onCellChange={setCell}
+            onVillageChange={setVillage}
+          />
 
           <Text style={styles.sectionTitle}>Assign Help</Text>
 
@@ -492,73 +432,18 @@ export default function RegisterPatient() {
                   <Input placeholder="Phone" value={familyPhone} onChangeText={setFamilyPhone} keyboardType="phone-pad" />
                 </View>
 
-                <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>District</Text>
-                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyDistrictDropdown(!showFamilyDistrictDropdown)}>
-                    <Text style={styles.dropdownText}>{familyDistrict || 'Select District'}</Text>
-                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  {showFamilyDistrictDropdown && (
-                    <View style={styles.dropdownOptions}>
-                      {districts.map((d) => (
-                        <TouchableOpacity key={d} style={styles.dropdownOption} onPress={() => { setFamilyDistrict(d); setShowFamilyDistrictDropdown(false); }}>
-                          <Text style={styles.dropdownOptionText}>{d}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Sector</Text>
-                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilySectorDropdown(!showFamilySectorDropdown)}>
-                    <Text style={styles.dropdownText}>{familySector || 'Select Sector'}</Text>
-                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  {showFamilySectorDropdown && (
-                    <View style={styles.dropdownOptions}>
-                      {sectors.map((s) => (
-                        <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setFamilySector(s); setShowFamilySectorDropdown(false); }}>
-                          <Text style={styles.dropdownOptionText}>{s}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Cell</Text>
-                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyCellDropdown(!showFamilyCellDropdown)}>
-                    <Text style={styles.dropdownText}>{familyCell || 'Select Cell'}</Text>
-                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  {showFamilyCellDropdown && (
-                    <View style={styles.dropdownOptions}>
-                      {cells.map((c) => (
-                        <TouchableOpacity key={c} style={styles.dropdownOption} onPress={() => { setFamilyCell(c); setShowFamilyCellDropdown(false); }}>
-                          <Text style={styles.dropdownOptionText}>{c}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Village</Text>
-                  <TouchableOpacity style={styles.dropdown} onPress={() => setShowFamilyVillageDropdown(!showFamilyVillageDropdown)}>
-                    <Text style={styles.dropdownText}>{familyVillage || 'Select Village'}</Text>
-                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  {showFamilyVillageDropdown && (
-                    <View style={styles.dropdownOptions}>
-                      {villages.map((v) => (
-                        <TouchableOpacity key={v} style={styles.dropdownOption} onPress={() => { setFamilyVillage(v); setShowFamilyVillageDropdown(false); }}>
-                          <Text style={styles.dropdownOptionText}>{v}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                <LocationPicker
+                  province={familyProvince}
+                  district={familyDistrict}
+                  sector={familySector}
+                  cell={familyCell}
+                  village={familyVillage}
+                  onProvinceChange={setFamilyProvince}
+                  onDistrictChange={setFamilyDistrict}
+                  onSectorChange={setFamilySector}
+                  onCellChange={setFamilyCell}
+                  onVillageChange={setFamilyVillage}
+                />
 
                 <View style={styles.buttonWrapper}>
                   <Button variant="primary" onPress={saveFamilyMember} disabled={isLoading}>

@@ -13,6 +13,7 @@ type User = {
   phone: string;
   role: string;
   workplace?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;
@@ -102,12 +103,18 @@ export default function ViewUser() {
                   <Text style={styles.detailValue}>{user.workplace}</Text>
                 </View>
               ) : null}
-              {user.district ? (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>District</Text>
-                  <Text style={styles.detailValue}>{user.district}</Text>
-                </View>
-              ) : null}
+              {user.province ? (
+                 <View style={styles.detailRow}>
+                   <Text style={styles.detailLabel}>Province</Text>
+                   <Text style={styles.detailValue}>{user.province}</Text>
+                 </View>
+               ) : null}
+               {user.district ? (
+                 <View style={styles.detailRow}>
+                   <Text style={styles.detailLabel}>District</Text>
+                   <Text style={styles.detailValue}>{user.district}</Text>
+                 </View>
+               ) : null}
               {user.sector ? (
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Sector</Text>

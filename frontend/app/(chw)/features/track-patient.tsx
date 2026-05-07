@@ -84,7 +84,7 @@ export default function TrackPatient() {
                   )}
                 </View>
                 <Text style={styles.patientAddress}>
-                  {['district', 'sector', 'cell', 'village'].map((k) => patient[k]).filter(Boolean).join(', ') || 'Address not available'}
+                  {['province', 'district', 'sector', 'cell', 'village'].map((k) => patient[k]).filter(Boolean).join(', ') || 'Address not available'}
                 </Text>
                 <Button
                   variant={patient.tracked ? 'secondary' : 'primary'}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Container, Card, Input, Button } from '@/components/ui';
+import { Container, Card, Input, Button, LocationPicker } from '@/components/ui';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,24 +13,17 @@ export default function AddUser() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [workplace, setWorkplace] = useState('');
+  const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [sector, setSector] = useState('');
   const [cell, setCell] = useState('');
   const [village, setVillage] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
-  const [showSectorDropdown, setShowSectorDropdown] = useState(false);
-  const [showCellDropdown, setShowCellDropdown] = useState(false);
-  const [showVillageDropdown, setShowVillageDropdown] = useState(false);
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState<'success' | 'error' | 'warning'>('success');
 
   // Options
   const roles = ['MHP', 'CHW'];
-  const districts = ['Gasabo', 'Kicukiro', 'Nyarugenge'];
-  const sectors = ['Remera', 'Kacyiru', 'Kimisagara'];
-  const cells = ['Cell A', 'Cell B', 'Cell C'];
-  const villages = ['Village 1', 'Village 2', 'Village 3'];
 
   const save = async () => {
     if (!selectedRole || !fullName || !email || !phone) {
@@ -41,8 +34,8 @@ export default function AddUser() {
       Alert.alert('Missing Workplace', 'Please enter workplace (Hospital/Health Center) for MHP');
       return;
     }
-    if (selectedRole === 'CHW' && (!district || !sector || !cell || !village)) {
-      Alert.alert('Missing Address Fields', 'Please fill all address fields (District, Sector, Cell, Village) for CHW');
+    if (selectedRole === 'CHW' && (!province || !district || !sector || !cell || !village)) {
+      Alert.alert('Missing Address Fields', 'Please fill all address fields (Province, District, Sector, Cell, Village) for CHW');
       return;
     }
     const nameParts = fullName.trim().split(/\s+/);
@@ -67,6 +60,7 @@ export default function AddUser() {
         role: selectedRole,
         phone,
         workplace: selectedRole === 'MHP' ? workplace : undefined,
+        province: selectedRole === 'CHW' ? province : undefined,
         district: selectedRole === 'CHW' ? district : undefined,
         sector: selectedRole === 'CHW' ? sector : undefined,
         cell: selectedRole === 'CHW' ? cell : undefined,
@@ -87,6 +81,7 @@ export default function AddUser() {
               setEmail('');
               setPhone('');
               setWorkplace('');
+              setProvince('');
               setDistrict('');
               setSector('');
               setCell('');
@@ -178,72 +173,18 @@ export default function AddUser() {
                 </View>
               )}
               {selectedRole === 'CHW' && (
-                <>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>District</Text>
-                    <TouchableOpacity style={styles.dropdown} onPress={() => setShowDistrictDropdown(!showDistrictDropdown)}>
-                      <Text style={styles.dropdownText}>{district || 'Select District'}</Text>
-                      <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {showDistrictDropdown && (
-                      <View style={styles.dropdownOptions}>
-                        {districts.map((d) => (
-                          <TouchableOpacity key={d} style={styles.dropdownOption} onPress={() => { setDistrict(d); setShowDistrictDropdown(false); }}>
-                            <Text style={styles.dropdownOptionText}>{d}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Sector</Text>
-                    <TouchableOpacity style={styles.dropdown} onPress={() => setShowSectorDropdown(!showSectorDropdown)}>
-                      <Text style={styles.dropdownText}>{sector || 'Select Sector'}</Text>
-                      <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {showSectorDropdown && (
-                      <View style={styles.dropdownOptions}>
-                        {sectors.map((s) => (
-                          <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setSector(s); setShowSectorDropdown(false); }}>
-                            <Text style={styles.dropdownOptionText}>{s}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Cell</Text>
-                    <TouchableOpacity style={styles.dropdown} onPress={() => setShowCellDropdown(!showCellDropdown)}>
-                      <Text style={styles.dropdownText}>{cell || 'Select Cell'}</Text>
-                      <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {showCellDropdown && (
-                      <View style={styles.dropdownOptions}>
-                        {cells.map((c) => (
-                          <TouchableOpacity key={c} style={styles.dropdownOption} onPress={() => { setCell(c); setShowCellDropdown(false); }}>
-                            <Text style={styles.dropdownOptionText}>{c}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Village</Text>
-                    <TouchableOpacity style={styles.dropdown} onPress={() => setShowVillageDropdown(!showVillageDropdown)}>
-                      <Text style={styles.dropdownText}>{village || 'Select Village'}</Text>
-                      <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {showVillageDropdown && (
-                      <View style={styles.dropdownOptions}>
-                        {villages.map((v) => (
-                          <TouchableOpacity key={v} style={styles.dropdownOption} onPress={() => { setVillage(v); setShowVillageDropdown(false); }}>
-                            <Text style={styles.dropdownOptionText}>{v}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                </>
+                <LocationPicker
+                  province={province}
+                  district={district}
+                  sector={sector}
+                  cell={cell}
+                  village={village}
+                  onProvinceChange={setProvince}
+                  onDistrictChange={setDistrict}
+                  onSectorChange={setSector}
+                  onCellChange={setCell}
+                  onVillageChange={setVillage}
+                />
               )}
               <View style={styles.buttonWrapper}>
                 <Button variant="primary" fullWidth onPress={save}>

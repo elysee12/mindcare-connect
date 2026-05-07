@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Container, Card, Input, Button } from '@/components/ui';
+import { Container, Card, Input, Button, LocationPicker } from '@/components/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -13,6 +13,7 @@ type User = {
   phone: string;
   role: string;
   workplace?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;
@@ -27,6 +28,7 @@ export default function EditUser() {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
   const [workplace, setWorkplace] = useState('');
+  const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [sector, setSector] = useState('');
   const [cell, setCell] = useState('');
@@ -46,6 +48,7 @@ export default function EditUser() {
       setPhone(user.phone || '');
       setRole(user.role || '');
       setWorkplace(user.workplace || '');
+      setProvince(user.province || '');
       setDistrict(user.district || '');
       setSector(user.sector || '');
       setCell(user.cell || '');
@@ -66,7 +69,7 @@ export default function EditUser() {
       setTimeout(() => setStatus(''), 3000);
       return;
     }
-    if (role === 'CHW' && (!district || !sector || !cell || !village)) {
+    if (role === 'CHW' && (!province || !district || !sector || !cell || !village)) {
       setStatus('Please fill in all CHW address fields.');
       setTimeout(() => setStatus(''), 3000);
       return;
@@ -79,6 +82,7 @@ export default function EditUser() {
         phone,
         role,
         workplace: role === 'MHP' ? workplace : undefined,
+        province: role === 'CHW' ? province : undefined,
         district: role === 'CHW' ? district : undefined,
         sector: role === 'CHW' ? sector : undefined,
         cell: role === 'CHW' ? cell : undefined,
@@ -135,24 +139,18 @@ export default function EditUser() {
                 </View>
               )}
               {role === 'CHW' && (
-                <>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>District</Text>
-                    <Input value={district} onChangeText={setDistrict} placeholder="District" />
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Sector</Text>
-                    <Input value={sector} onChangeText={setSector} placeholder="Sector" />
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Cell</Text>
-                    <Input value={cell} onChangeText={setCell} placeholder="Cell" />
-                  </View>
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.fieldLabel}>Village</Text>
-                    <Input value={village} onChangeText={setVillage} placeholder="Village" />
-                  </View>
-                </>
+                <LocationPicker
+                  province={province}
+                  district={district}
+                  sector={sector}
+                  cell={cell}
+                  village={village}
+                  onProvinceChange={setProvince}
+                  onDistrictChange={setDistrict}
+                  onSectorChange={setSector}
+                  onCellChange={setCell}
+                  onVillageChange={setVillage}
+                />
               )}
               <View style={styles.buttonWrapper}>
                 <Button variant="primary" fullWidth onPress={save}>

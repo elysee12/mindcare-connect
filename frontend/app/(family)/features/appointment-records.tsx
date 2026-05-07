@@ -66,8 +66,8 @@ export default function AppointmentRecords() {
               <View style={styles.cardFooter}>
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                  <Text style={styles.infoLabel}>Location:</Text>
-                  <Text style={styles.infoValue}>{patient?.district}, {patient?.sector}</Text>
+                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoValue}>{patient?.province}, {patient?.district}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Ionicons name="business-outline" size={14} color={colors.textTertiary} />

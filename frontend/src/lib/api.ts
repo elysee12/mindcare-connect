@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // Backend URL using PC's local IP for phone/emulator access
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.68.59.24:3000') + '/api';
+const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.202.102.24:3000') + '/api';
 
 let authUserId: string | null = null;
 

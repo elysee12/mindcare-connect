@@ -57,7 +57,7 @@ export default function ViewTrackedPatients() {
               </View>
             </View>
             <Text style={styles.patientAddress}>
-              {['district', 'sector', 'cell', 'village']
+              {['province', 'district', 'sector', 'cell', 'village']
                 .map((field) => patient[field])
                 .filter(Boolean)
                 .join(', ') || 'Address not available'}

@@ -25,7 +25,7 @@ export default function PatientDetailScreen() {
 
   const patientName = patient?.fullName || patient?.full_name || 'Unknown Patient';
   const patientIdFormatted = formatPatientId(patient?.id);
-  const fullAddress = [patient?.district, patient?.sector, patient?.cell, patient?.village]
+  const fullAddress = [patient?.province, patient?.district, patient?.sector, patient?.cell, patient?.village]
     .filter(Boolean)
     .join(', ') || 'No address available';
   const assignedChwName = patient?.assignedChw?.fullName || patient?.assignedChw?.full_name || 'Unassigned';

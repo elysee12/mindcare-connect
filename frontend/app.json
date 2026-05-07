@@ -51,7 +51,7 @@
       "eas": {
         "projectId": "your-project-id-here"
       },
-      "BACKEND_URL": "http://10.68.59.24:3000"
+      "BACKEND_URL": "http://10.202.102.24:3000"
     }
   }
 }
