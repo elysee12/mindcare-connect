@@ -13,9 +13,24 @@ import { ReportModule } from './report/report.module';
 import { AuthModule } from './auth/auth.module';
 import { UploadModule } from './upload/upload.module';
 import { MailModule } from './mail/mail.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [PrismaModule, NotificationModule, UserModule, PatientModule, FollowupModule, ReminderModule, TreatmentChangeModule, SystemLogModule, ReportModule, AuthModule, UploadModule, MailModule],
+  imports: [
+    PrismaModule, 
+    NotificationModule, 
+    UserModule, 
+    PatientModule, 
+    FollowupModule, 
+    ReminderModule, 
+    TreatmentChangeModule, 
+    SystemLogModule, 
+    ReportModule, 
+    AuthModule, 
+    UploadModule, 
+    MailModule,
+    ScheduleModule.forRoot(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

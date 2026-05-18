@@ -5,11 +5,13 @@ import { colors, spacing, typography, shadows, borderRadius } from '@/constants/
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 type ForgotPasswordStep = 'email' | 'otp' | 'reset';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [step, setStep] = useState<ForgotPasswordStep>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -22,13 +24,13 @@ export default function ForgotPasswordScreen() {
 
   const handleRequestOtp = async () => {
     if (!email) {
-      setError('Please enter your email address');
+      setError(t('auth.email_required'));
       setTimeout(() => setError(''), 3000);
       return;
     }
 
     if (!email.includes('@')) {
-      setError('Please enter a valid email address');
+      setError(t('auth.valid_email_error'));
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -41,7 +43,7 @@ export default function ForgotPasswordScreen() {
       setStep('otp');
       setTimer(60);
     } catch (err: any) {
-      setError(err.message || 'Failed to send OTP. Please try again.');
+      setError(err.message || t('auth.invalid_credentials'));
       setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
@@ -50,7 +52,7 @@ export default function ForgotPasswordScreen() {
 
   const handleVerifyOtp = async () => {
     if (!otp) {
-      setError('Please enter the OTP');
+      setError(t('auth.otp_required'));
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -62,7 +64,7 @@ export default function ForgotPasswordScreen() {
       await api.verifyOtp(email, otp);
       setStep('reset');
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please check and try again.');
+      setError(err.message || t('auth.invalid_credentials'));
       setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
@@ -71,19 +73,19 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!newPassword || !confirmPassword) {
-      setError('Please fill in all password fields');
+      setError(t('auth.fill_all_fields'));
       setTimeout(() => setError(''), 3000);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.password_min_length'));
       setTimeout(() => setError(''), 3000);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwords_dont_match'));
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -93,88 +95,40 @@ export default function ForgotPasswordScreen() {
 
     try {
       await api.resetPassword(email, otp, newPassword);
-      Alert.alert('Success', 'Your password has been reset successfully.', [
+      Alert.alert(t('common.success'), t('auth.password_reset_success'), [
         { text: 'OK', onPress: () => router.replace('/(auth)/login') }
       ]);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please try again.');
-      setTimeout(() => setError(''), 5000);
+      setError(err.message || t('auth.invalid_credentials'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOtp = async () => {
-    if (timer === 0) {
-      setLoading(true);
-      setError('');
-      try {
-        await api.requestOtp(email);
-        setTimer(60);
-        Alert.alert('Success', 'OTP has been resent to your email.');
-      } catch (err: any) {
-        setError(err.message || 'Failed to resend OTP.');
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleBackToLogin = () => {
+    router.replace('/(auth)/login');
   };
 
-  const handleBack = () => {
-    if (step === 'email') {
-      router.back();
-    } else if (step === 'otp') {
-      setStep('email');
-      setOtp('');
-      setError('');
-    } else {
-      setStep('otp');
-      setNewPassword('');
-      setConfirmPassword('');
-      setError('');
-    }
-  };
-
-  React.useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => {
-        setTimer((t) => t - 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [timer]);
-
-  return (
-    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
-            <View style={styles.logoContainer}>
-              <Ionicons name="lock-closed-outline" size={50} color={colors.primary} />
+  const renderStep = () => {
+    switch (step) {
+      case 'email':
+        return (
+          <>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="mail-open" size={40} color={colors.primary} />
+              </View>
+              <Text style={styles.title}>{t('auth.forgot_password')}</Text>
+              <Text style={styles.subtitle}>{t('auth.enter_email_to_reset')}</Text>
             </View>
-            <Text style={styles.title}>Reset Password</Text>
-            <Text style={styles.subtitle}>
-              {step === 'email' && 'Enter your email to receive an OTP'}
-              {step === 'otp' && 'Enter the OTP sent to your email'}
-              {step === 'reset' && 'Create a new password'}
-            </Text>
-          </View>
 
-          <Card variant="elevated" style={styles.card}>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            {step === 'email' && (
-              <>
+            <Card variant="elevated" style={styles.card}>
+              <Card.Content>
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
                 <View style={styles.fieldSpacing}>
-                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <Text style={styles.inputLabel}>{t('auth.email')}</Text>
                   <Input
-                    placeholder="your@email.com"
+                    placeholder={t('auth.email_placeholder')}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -183,27 +137,43 @@ export default function ForgotPasswordScreen() {
                   />
                 </View>
 
-                <View style={styles.buttonWrapper}>
-                  <Button variant="primary" size="lg" onPress={handleRequestOtp} fullWidth loading={loading}>
-                    Request OTP
+                <View style={styles.buttonContainer}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onPress={handleRequestOtp}
+                    loading={loading}
+                  >
+                    {t('auth.send_otp')}
                   </Button>
                 </View>
-              </>
-            )}
 
-            {step === 'otp' && (
-              <>
-                <View style={styles.otpContainer}>
-                  <Text style={styles.otpInstructions}>
-                    We've sent a 6-digit OTP to{'\n'}
-                    <Text style={styles.otpEmail}>{email}</Text>
-                  </Text>
-                </View>
+                <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin}>
+                  <Text style={styles.backButtonText}>{t('auth.back_to_login')}</Text>
+                </TouchableOpacity>
+              </Card.Content>
+            </Card>
+          </>
+        );
 
+      case 'otp':
+        return (
+          <>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="keypad" size={40} color={colors.primary} />
+              </View>
+              <Text style={styles.title}>{t('auth.enter_otp')}</Text>
+              <Text style={styles.subtitle}>{t('auth.enter_otp_description')}</Text>
+            </View>
+
+            <Card variant="elevated" style={styles.card}>
+              <Card.Content>
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
                 <View style={styles.fieldSpacing}>
-                  <Text style={styles.inputLabel}>One-Time Password (OTP)</Text>
+                  <Text style={styles.inputLabel}>{t('auth.enter_otp')}</Text>
                   <Input
-                    placeholder="000000"
+                    placeholder="••••••"
                     value={otp}
                     onChangeText={setOtp}
                     keyboardType="number-pad"
@@ -212,28 +182,46 @@ export default function ForgotPasswordScreen() {
                   />
                 </View>
 
-                <View style={styles.timerContainer}>
-                  {timer > 0 ? (
-                    <Text style={styles.timerText}>Resend OTP in {timer}s</Text>
-                  ) : (
-                    <TouchableOpacity onPress={handleResendOtp} disabled={loading}>
-                      <Text style={[styles.resendText, loading && { opacity: 0.5 }]}>Resend OTP</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.buttonWrapper}>
-                  <Button variant="primary" size="lg" onPress={handleVerifyOtp} fullWidth loading={loading}>
-                    Verify OTP
+                <View style={styles.buttonContainer}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onPress={handleVerifyOtp}
+                    loading={loading}
+                  >
+                    {t('auth.verify_otp')}
                   </Button>
                 </View>
-              </>
-            )}
 
-            {step === 'reset' && (
-              <>
+                <TouchableOpacity 
+                  style={styles.backButton} 
+                  onPress={() => setStep('email')}
+                  disabled={loading}
+                >
+                  <Text style={styles.backButtonText}>{t('auth.back_to_login')}</Text>
+                </TouchableOpacity>
+              </Card.Content>
+            </Card>
+          </>
+        );
+
+      case 'reset':
+        return (
+          <>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="lock-open" size={40} color={colors.primary} />
+              </View>
+              <Text style={styles.title}>{t('auth.reset_password')}</Text>
+              <Text style={styles.subtitle}>{t('auth.set_new_password')}</Text>
+            </View>
+
+            <Card variant="elevated" style={styles.card}>
+              <Card.Content>
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                
                 <View style={styles.fieldSpacing}>
-                  <Text style={styles.inputLabel}>New Password</Text>
+                  <Text style={styles.inputLabel}>{t('auth.new_password')}</Text>
                   <Input
                     placeholder="••••••••"
                     value={newPassword}
@@ -242,10 +230,10 @@ export default function ForgotPasswordScreen() {
                     leftIcon={<Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />}
                     rightIcon={
                       <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                        <Ionicons
-                          name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                          size={20}
-                          color={colors.textSecondary}
+                        <Ionicons 
+                          name={showPassword ? 'eye-outline' : 'eye-off-outline'} 
+                          size={20} 
+                          color={colors.textSecondary} 
                         />
                       </TouchableOpacity>
                     }
@@ -253,7 +241,7 @@ export default function ForgotPasswordScreen() {
                 </View>
 
                 <View style={styles.fieldSpacingLarge}>
-                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <Text style={styles.inputLabel}>{t('auth.confirm_password')}</Text>
                   <Input
                     placeholder="••••••••"
                     value={confirmPassword}
@@ -263,23 +251,31 @@ export default function ForgotPasswordScreen() {
                   />
                 </View>
 
-                <View style={styles.buttonWrapper}>
-                  <Button variant="primary" size="lg" onPress={handleResetPassword} fullWidth loading={loading}>
-                    Reset Password
+                <View style={styles.buttonContainer}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onPress={handleResetPassword}
+                    loading={loading}
+                  >
+                    {t('auth.reset_password')}
                   </Button>
                 </View>
-              </>
-            )}
-          </Card>
+              </Card.Content>
+            </Card>
+          </>
+        );
+    }
+  };
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Remembered your password?{' '}
-              <Text style={styles.footerLink} onPress={() => router.replace('/login')}>
-                Login here
-              </Text>
-            </Text>
-          </View>
+  return (
+    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.content}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          {renderStep()}
         </ScrollView>
       </KeyboardAvoidingView>
     </Container>

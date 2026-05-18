@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req, Patch, Param, Delete } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { NotificationService } from '../notification/notification.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -30,6 +30,7 @@ export class ReportController {
   @UseGuards(JwtAuthGuard)
   async findAll(
     @Query('mhpId') mhpId?: string,
+    @Query('chwId') chwId?: string,
     @Query('timeframe') timeframe?: string,
     @Query('search') search?: string,
     @Query('startDate') startDate?: string,
@@ -38,9 +39,10 @@ export class ReportController {
   ) {
     const currentUserId = req?.user?.id;
     let effectiveMhpId = mhpId ? +mhpId : undefined;
+    let effectiveChwId = chwId ? +chwId : undefined;
 
     // If MHP is logged in and no explicit mhpId provided, filter to their own data
-    if (currentUserId && !mhpId) {
+    if (currentUserId && !mhpId && !chwId) {
       const currentUser = await this.prisma.user.findUnique({
         where: { id: currentUserId },
       });
@@ -57,6 +59,18 @@ export class ReportController {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     
-    return this.reportService.findAll(effectiveMhpId, search, start, end);
+    return this.reportService.findAll(effectiveMhpId, search, start, end, effectiveChwId);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  async update(@Param('id') id: string, @Body() updateReportDto: Partial<CreateReportDto>) {
+    return this.reportService.update(+id, updateReportDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async remove(@Param('id') id: string) {
+    return this.reportService.remove(+id);
   }
 }

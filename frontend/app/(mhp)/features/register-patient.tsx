@@ -119,7 +119,7 @@ export default function RegisterPatient() {
       } as any);
 
       // Use the same backend URL as other API calls
-      const backendUrl = (Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com');
+      const backendUrl = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://172.18.240.24:3000');
 
       const uploadResponse = await fetch(`${backendUrl}/api/upload`, {
         method: 'POST',

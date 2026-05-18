@@ -145,6 +145,43 @@ export default function PatientDetailScreen() {
                 <Text style={styles.detailValue}>{patient?.status || 'N/A'}</Text>
               </View>
             </View>
+
+            {patient?.foundByUser && (
+              <View style={styles.foundInfoContainer}>
+                <View style={styles.foundHeader}>
+                  <Ionicons name="location" size={20} color={colors.success} />
+                  <Text style={styles.foundTitle}>Located Information</Text>
+                </View>
+                <View style={styles.foundContent}>
+                  <Text style={styles.foundLabel}>Located at: <Text style={styles.foundValue}>{patient.locationFound}</Text></Text>
+                  {patient.foundDetails ? <Text style={styles.foundLabel}>Notes: <Text style={styles.foundValue}>{patient.foundDetails}</Text></Text> : null}
+                  
+                  <View style={styles.finderDetails}>
+                    <Text style={styles.finderTitle}>Finder Details:</Text>
+                    <View style={styles.finderRow}>
+                      <Ionicons name="person" size={14} color={colors.textSecondary} />
+                      <Text style={styles.finderText}>{patient.foundByUser.fullName} ({patient.foundByUser.role})</Text>
+                    </View>
+                    <View style={styles.finderRow}>
+                      <Ionicons name="mail" size={14} color={colors.textSecondary} />
+                      <Text style={styles.finderText}>{patient.foundByUser.email}</Text>
+                    </View>
+                    {patient.foundByUser.phone && (
+                      <View style={styles.finderRow}>
+                        <Ionicons name="call" size={14} color={colors.textSecondary} />
+                        <Text style={styles.finderText}>{patient.foundByUser.phone}</Text>
+                      </View>
+                    )}
+                    {patient.foundByUser.workplace && (
+                      <View style={styles.finderRow}>
+                        <Ionicons name="business" size={14} color={colors.textSecondary} />
+                        <Text style={styles.finderText}>{patient.foundByUser.workplace}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
           </Card.Content>
         </Card>
 
@@ -352,6 +389,56 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...typography.body,
+    color: colors.text,
+  },
+  foundInfoContainer: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.success + '10',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.success + '30',
+  },
+  foundHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  foundTitle: {
+    ...typography.bodyBold,
+    color: colors.success,
+  },
+  foundContent: {
+    gap: spacing.xs,
+  },
+  foundLabel: {
+    ...typography.captionBold,
+    color: colors.textSecondary,
+  },
+  foundValue: {
+    ...typography.caption,
+    color: colors.text,
+  },
+  finderDetails: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.success + '20',
+    gap: 4,
+  },
+  finderTitle: {
+    ...typography.tinyBold,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  finderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  finderText: {
+    ...typography.tiny,
     color: colors.text,
   },
   sectionTitle: {

@@ -41,6 +41,7 @@ model User {
   systemLogs          SystemLog[]
   reportsSubmitted    Report[]   @relation("ReportByCHW")
   reportsReceived     Report[]   @relation("ReportForMHP")
+  foundPatients       Patient[]  @relation("PatientFoundBy")
   otpCode             String?
   otpExpiry           DateTime?
   createdAt           DateTime   @default(now())
@@ -67,10 +68,15 @@ model Patient {
   registeredByMhpId Int?
   assignedChwId     Int?
   assignedFamilyId  Int?
+  foundByUserId     Int?
 
   registeredByMhp   User?       @relation("PatientMHP", fields: [registeredByMhpId], references: [id])
   assignedChw       User?       @relation("PatientCHW", fields: [assignedChwId], references: [id])
   assignedFamily    User?       @relation("PatientFamily", fields: [assignedFamilyId], references: [id])
+  foundByUser       User?       @relation("PatientFoundBy", fields: [foundByUserId], references: [id])
+
+  locationFound     String?
+  foundDetails      String?
 
   followups         Followup[]
   reminders         Reminder[]

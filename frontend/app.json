@@ -39,7 +39,8 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
@@ -49,9 +50,10 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "a523e007-93d9-40cf-81e2-4a7379924cd2"
       },
-      "BACKEND_URL": "https://mindcare-connect.onrender.com"
-    }
+      "BACKEND_URL": "http://172.18.240.24:3000"
+    },
+    "owner": "elysee"
   }
 }

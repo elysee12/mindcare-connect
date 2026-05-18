@@ -84,6 +84,16 @@ export class PatientController {
     return this.patientService.trackPatient(+id);
   }
 
+  @Patch(':id/found')
+  @UseGuards(JwtAuthGuard)
+  async found(
+    @Param('id') id: string, 
+    @Body() data: { locationFound: string; details?: string },
+    @Req() req
+  ) {
+    return this.patientService.markAsFound(+id, req.user.id, data.locationFound, data.details);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.patientService.findOne(+id);

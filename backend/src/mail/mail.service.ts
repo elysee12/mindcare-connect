@@ -170,4 +170,82 @@ export class MailService implements OnModuleInit {
     `;
     return this.sendMail(to, subject, html);
   }
+
+  async sendAppointmentEmail(to: string, data: { 
+    patientName: string; 
+    appointmentTitle: string; 
+    appointmentTime: string; 
+    type: 'creation' | 'reminder';
+  }) {
+    const isReminder = data.type === 'reminder';
+    const subject = isReminder 
+      ? `Reminder: 1 Day Until Appointment - ${data.patientName}`
+      : `New Appointment Scheduled - ${data.patientName}`;
+
+    const titleText = isReminder 
+      ? 'Appointment Reminder' 
+      : 'New Appointment Scheduled';
+    
+    const bodyText = isReminder
+      ? `This is a friendly reminder that there is only 1 day (24 hours) remaining until the scheduled appointment for <strong>${data.patientName}</strong>.`
+      : `A new appointment has been scheduled for <strong>${data.patientName}</strong>. Please find the details below.`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #F8FAFC; color: #64748B; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; }
+          .header { background-color: #2EB67D; padding: 30px 20px; text-align: center; }
+          .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+          .content { padding: 40px 30px; line-height: 1.6; }
+          .content p { margin-bottom: 20px; font-size: 16px; color: #475569; }
+          .appointment-box { background-color: #F1F5F9; border-radius: 8px; padding: 25px; margin: 25px 0; border-left: 4px solid #2EB67D; }
+          .info-row { margin-bottom: 12px; display: flex; align-items: baseline; }
+          .info-label { font-weight: 600; color: #1E293B; width: 100px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.025em; }
+          .info-value { color: #334155; font-size: 16px; }
+          .footer { background-color: #F8FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0; }
+          .footer p { font-size: 13px; color: #94A3B8; margin: 0; }
+          .btn { display: inline-block; background-color: #2EB67D; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>MindCare Connect</h1>
+          </div>
+          <div class="content">
+            <h2 style="color: #1E293B; margin-top: 0;">${titleText}</h2>
+            <p>${bodyText}</p>
+            
+            <div class="appointment-box">
+              <div class="info-row">
+                <span class="info-label">Patient:</span>
+                <span class="info-value">${data.patientName}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Title:</span>
+                <span class="info-value">${data.appointmentTitle}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Time:</span>
+                <span class="info-value">${data.appointmentTime}</span>
+              </div>
+            </div>
+            
+            <p>Please ensure that all necessary preparations are made for this appointment.</p>
+          </div>
+          <div class="footer">
+            <p>&copy; 2026 MindCare Connect. All rights reserved.</p>
+            <p>This is an automated message, please do not reply.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendMail(to, subject, html);
+  }
 }

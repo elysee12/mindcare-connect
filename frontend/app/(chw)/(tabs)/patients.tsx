@@ -8,10 +8,12 @@ import { api } from '@/lib/api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { formatPatientId } from '@/lib/format';
+import { useTranslation } from 'react-i18next';
 
 export default function PatientsScreen() {
   const { role: paramRole, userId: paramUserId } = useLocalSearchParams<{ role: string; userId?: string }>();
   const { user: authUser } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'tracked' | 'untracked'>('all');
@@ -39,11 +41,11 @@ export default function PatientsScreen() {
   const handleDeleteUser = async (userId: string) => {
     const confirmed = await new Promise<boolean>(resolve => {
       Alert.alert(
-        'Delete User',
-        'Are you sure you want to delete this user?',
+        t('patients.delete_user_title'),
+        t('patients.delete_user_confirm'),
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+          { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('common.delete'), style: 'destructive', onPress: () => resolve(true) },
         ],
         { cancelable: true }
       );
@@ -56,7 +58,7 @@ export default function PatientsScreen() {
       // refetch will update items
       refetch();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Unable to delete user.');
+      Alert.alert(t('common.error'), err.message || 'Unable to delete user.');
     }
   };
 
@@ -109,11 +111,11 @@ export default function PatientsScreen() {
   const handleDeletePatient = async (patientId: string) => {
     const confirmed = await new Promise<boolean>(resolve => {
       Alert.alert(
-        'Delete Patient',
-        'Are you sure you want to delete this patient record?',
+        t('patients.delete_patient_title'),
+        t('patients.delete_patient_confirm'),
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+          { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('common.delete'), style: 'destructive', onPress: () => resolve(true) },
         ],
         { cancelable: true }
       );
@@ -124,9 +126,9 @@ export default function PatientsScreen() {
     try {
       await api.deletePatient(patientId);
       refetch();
-      Alert.alert('Success', 'Patient deleted successfully');
+      Alert.alert(t('common.success'), t('patients.delete_success'));
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Unable to delete patient.');
+      Alert.alert(t('common.error'), err.message || 'Unable to delete patient.');
     }
   };
 
@@ -146,19 +148,19 @@ export default function PatientsScreen() {
             </View>
           )}
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
-            <Text style={styles.patientName}>{item.fullName || item.full_name || 'Unknown'}</Text>
+            <Text style={styles.patientName}>{item.fullName || item.full_name || t('patients.unknown')}</Text>
             <Text style={styles.patientDetail}>ID: {formatPatientId(item.id)}</Text>
-            <Text style={styles.patientDetail}>Status: {item.status}</Text>
+            <Text style={styles.patientDetail}>{t('patients.status')}: {item.status}</Text>
           </View>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionButton} onPress={() => handleViewPatient(item)}>
             <Ionicons name="eye-outline" size={20} color={colors.primary} />
-            <Text style={styles.actionText}>View</Text>
+            <Text style={styles.actionText}>{t('patients.action_view')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => handleTrackPatient(item)}>
             <Ionicons name="navigate-outline" size={20} color={colors.success} />
-            <Text style={styles.actionText}>Track</Text>
+            <Text style={styles.actionText}>{t('patients.action_track')}</Text>
           </TouchableOpacity>
         </View>
       </Card.Content>
@@ -179,8 +181,8 @@ export default function PatientsScreen() {
           <View style={{ marginLeft: spacing.md, flex: 1 }}>
             <Text style={styles.patientName}>{item.fullName || item.email}</Text>
             <Text style={styles.patientDetail}>{(item.role || '').toUpperCase()} • {item.email}</Text>
-            {item.phone ? <Text style={styles.patientDetail}>Phone: {item.phone}</Text> : null}
-            {item.workplace ? <Text style={styles.patientDetail}>Workplace: {item.workplace}</Text> : null}
+            {item.phone ? <Text style={styles.patientDetail}>{t('patients.phone')}: {item.phone}</Text> : null}
+            {item.workplace ? <Text style={styles.patientDetail}>{t('patients.workplace')}: {item.workplace}</Text> : null}
           </View>
         </View>
         <View style={styles.actions}>
@@ -198,7 +200,7 @@ export default function PatientsScreen() {
   return (
     <Container safeArea edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{userRole === 'admin' ? 'User Management' : 'Patients'}</Text>
+        <Text style={styles.title}>{userRole === 'admin' ? t('dashboard.user_management') : t('patients.title')}</Text>
         {canRegister && (
           <TouchableOpacity style={styles.addBtn} onPress={handleAddPatient}>
             <Ionicons name="add" size={28} color={colors.white} />
@@ -209,7 +211,7 @@ export default function PatientsScreen() {
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color={colors.textTertiary} style={styles.searchIcon} />
         <TextInput
-          placeholder={isAdmin ? "Search users by name or email..." : "Search patients by name or ID..."}
+          placeholder={isAdmin ? t('patients.search_users_placeholder') : t('patients.search_patients_placeholder')}
           style={styles.searchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -227,19 +229,19 @@ export default function PatientsScreen() {
             style={[styles.filterBtn, filter === 'all' && styles.filterBtnActive]} 
             onPress={() => setFilter('all')}
           >
-            <Text style={[styles.filterBtnText, filter === 'all' && styles.filterBtnTextActive]}>All</Text>
+            <Text style={[styles.filterBtnText, filter === 'all' && styles.filterBtnTextActive]}>{t('patients.filter_all')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.filterBtn, filter === 'tracked' && styles.filterBtnActive]} 
             onPress={() => setFilter('tracked')}
           >
-            <Text style={[styles.filterBtnText, filter === 'tracked' && styles.filterBtnTextActive]}>Tracked</Text>
+            <Text style={[styles.filterBtnText, filter === 'tracked' && styles.filterBtnTextActive]}>{t('patients.filter_tracked')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.filterBtn, filter === 'untracked' && styles.filterBtnActive]} 
             onPress={() => setFilter('untracked')}
           >
-            <Text style={[styles.filterBtnText, filter === 'untracked' && styles.filterBtnTextActive]}>Untracked</Text>
+            <Text style={[styles.filterBtnText, filter === 'untracked' && styles.filterBtnTextActive]}>{t('patients.filter_untracked')}</Text>
           </TouchableOpacity>
         </View>
       )}

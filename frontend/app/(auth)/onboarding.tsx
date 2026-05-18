@@ -5,32 +5,34 @@ import { colors, spacing, typography, shadows, borderRadius } from '@/constants/
 import { Ionicons } from '@expo/vector-icons';
 import { Container, Button } from '@/components/ui';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
-const ONBOARDING_DATA = [
-  {
-    title: 'Welcome to MindCare',
-    description: 'A platform dedicated to connecting mental health professionals, community workers, and families for better patient care.',
-    icon: 'heart',
-  },
-  {
-    title: 'Seamless Follow-up',
-    description: 'Track patient progress, manage appointments, and receive timely alerts for treatment changes.',
-    icon: 'heart',
-  },
-  {
-    title: 'Collaborative Care',
-    description: 'Enable families and healthcare workers to share updates and insights instantly.',
-    icon: 'heart',
-  },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const ONBOARDING_DATA = [
+    {
+      title: t('onboarding.welcome_title'),
+      description: t('onboarding.welcome_desc'),
+      icon: 'heart',
+    },
+    {
+      title: t('onboarding.followup_title'),
+      description: t('onboarding.followup_desc'),
+      icon: 'heart',
+    },
+    {
+      title: t('onboarding.collaborative_title'),
+      description: t('onboarding.collaborative_desc'),
+      icon: 'heart',
+    },
+  ];
 
   const handleNext = async () => {
     if (currentIndex < ONBOARDING_DATA.length - 1) {
@@ -62,7 +64,7 @@ export default function OnboardingScreen() {
     <Container safeArea style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -118,11 +120,13 @@ export default function OnboardingScreen() {
         </View>
 
         <Button
-          label={currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
-          onPress={handleNext}
           variant="primary"
+          size="lg"
+          onPress={handleNext}
           style={styles.nextButton}
-        />
+        >
+          {currentIndex === ONBOARDING_DATA.length - 1 ? t('onboarding.get_started') : t('onboarding.next')}
+        </Button>
       </View>
     </Container>
   );

@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
-// Backend URL using Render production URL
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com') + '/api';
+// Backend URL using Local IPv4
+const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://172.18.240.24:3000') + '/api';
 
 let authUserId: string | null = null;
 
@@ -76,6 +76,10 @@ export const api = {
   followups: (patientId: string) => request(`/patients/${patientId}/followups`),
   createFollowup: (patientId: string, payload: any) => request(`/patients/${patientId}/followups`, { method: 'POST', body: JSON.stringify(payload) }),
   notifications: (userId?: string) => request(`/notifications${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`),
+  notificationById: (id: number) => request(`/notifications/${id}`),
+  updateNotification: (id: number, data: any) => request(`/notifications/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteNotification: (id: number) => request(`/notifications/${id}`, { method: 'DELETE' }),
+  clearAllNotifications: (userId: number) => request(`/notifications/user/${userId}/clear-all`, { method: 'DELETE' }),
   reminders: (patientId?: string) => request(`/reminders${patientId ? `?patientId=${encodeURIComponent(patientId)}` : ''}`),
   createReminder: (payload: any) => request('/reminders', { method: 'POST', body: JSON.stringify(payload) }),
   updateReminder: (id: number, payload: any) => request(`/reminders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
@@ -88,16 +92,21 @@ export const api = {
   clearLogs: () => request('/system-logs', { method: 'DELETE' }),
   trackedPatients: () => request('/patients/tracked'),
   trackPatient: (id: number) => request(`/patients/${id}/track`, { method: 'PATCH' }),
+  markPatientAsFound: (id: number, locationFound: string, details?: string) => 
+    request(`/patients/${id}/found`, { method: 'PATCH', body: JSON.stringify({ locationFound, details }) }),
   submitReport: (payload: any) => request('/reports', { method: 'POST', body: JSON.stringify(payload) }),
-  reports: (params?: { search?: string; startDate?: string; endDate?: string }) => {
+  updateReport: (id: number, payload: any) => request(`/reports/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteReport: (id: number) => request(`/reports/${id}`, { method: 'DELETE' }),
+  reports: (params?: { search?: string; startDate?: string; endDate?: string; chwId?: string }) => {
     let query = '';
+    const parts = [];
     if (params) {
-      const parts = [];
       if (params.search) parts.push(`search=${encodeURIComponent(params.search)}`);
       if (params.startDate) parts.push(`startDate=${params.startDate}`);
       if (params.endDate) parts.push(`endDate=${params.endDate}`);
-      if (parts.length > 0) query = `?${parts.join('&')}`;
+      if (params.chwId) parts.push(`chwId=${params.chwId}`);
     }
+    if (parts.length > 0) query = `?${parts.join('&')}`;
     return request(`/reports${query}`);
   },
   globalFollowups: (params?: { search?: string; startDate?: string; endDate?: string }) => {

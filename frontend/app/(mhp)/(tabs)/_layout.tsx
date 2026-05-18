@@ -2,8 +2,13 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '@/constants/design';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export default function MhpTabLayout() {
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -12,8 +17,8 @@ export default function MhpTabLayout() {
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
           borderTopColor: colors.border,
-          height: 70,
-          paddingBottom: 10,
+          height: 70 + insets.bottom,
+          paddingBottom: insets.bottom + 10,
           paddingTop: 10,
           backgroundColor: colors.background,
         },
@@ -24,7 +29,7 @@ export default function MhpTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
           ),
@@ -33,7 +38,7 @@ export default function MhpTabLayout() {
       <Tabs.Screen
         name="patients"
         options={{
-          title: 'Patients',
+          title: t('nav.patients'),
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
           ),
@@ -42,7 +47,7 @@ export default function MhpTabLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Reports',
+          title: t('nav.reports'),
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={size} color={color} />
           ),
@@ -51,7 +56,7 @@ export default function MhpTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('nav.profile'),
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),

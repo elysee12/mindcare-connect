@@ -128,7 +128,12 @@ export class PatientService {
   async trackPatient(id: number) {
     const patient = await this.prisma.patient.update({
       where: { id },
-      data: { tracked: true },
+      data: { 
+        tracked: true,
+        foundByUserId: null,
+        locationFound: null,
+        foundDetails: null,
+      },
     });
 
     // Create notification for family member when patient is tracked
@@ -148,6 +153,38 @@ export class PatientService {
         event: `Patient ${patient.fullName} (ID: ${id}) tracking started`,
       },
     });
+
+    return patient;
+  }
+
+  async markAsFound(id: number, finderId: number, location: string, details?: string) {
+    const patient = await this.prisma.patient.update({
+      where: { id },
+      data: {
+        tracked: false,
+        foundByUserId: finderId,
+        locationFound: location,
+        foundDetails: details,
+      },
+      include: {
+        foundByUser: true,
+        registeredByMhp: true,
+      },
+    });
+
+    // Notify the assigned CHW instead of the MHP
+    if (patient.assignedChwId) {
+      await this.prisma.notification.create({
+        data: {
+          type: 'PATIENT_FOUND',
+          title: 'Missing Patient Found',
+          message: `${patient.fullName} has been located at ${location} by ${patient.foundByUser?.fullName}.`,
+          userId: patient.assignedChwId,
+          // Store extra metadata as JSON in the database if the schema supports it, 
+          // or we can just fetch the patient data when viewing the notification.
+        },
+      });
+    }
 
     return patient;
   }

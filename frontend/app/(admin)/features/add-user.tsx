@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.sm },
   title: { ...typography.h2, color: colors.primaryDark, marginBottom: spacing.xs },
   subtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
-  card: { padding: spacing.md, borderRadius: borderRadius.xl, ...shadows.sm },
+  card: { padding: spacing.md, borderRadius: borderRadius.xl, ...shadows.sm, overflow: 'visible' },
   fieldWrapper: { marginBottom: spacing.md },
   fieldLabel: { ...typography.captionBold, color: colors.textSecondary, marginBottom: spacing.xs },
   dropdown: {
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
-    zIndex: 10,
-    maxHeight: 150,
+    zIndex: 1000,
+    elevation: 10,
   },
   dropdownOption: {
     padding: spacing.sm,

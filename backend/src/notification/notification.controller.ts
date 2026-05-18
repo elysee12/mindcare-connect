@@ -31,4 +31,9 @@ export class NotificationController {
   remove(@Param('id') id: string) {
     return this.notificationService.remove(+id);
   }
+
+  @Delete('user/:userId/clear-all')
+  clearAll(@Param('userId') userId: string) {
+    return this.notificationService.clearAll(+userId);
+  }
 }

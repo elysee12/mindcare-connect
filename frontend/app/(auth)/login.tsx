@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '@/components/LanguageSelector';
 
 type Role = 'mhp' | 'chw' | 'family' | 'admin';
 
@@ -25,6 +27,7 @@ const detectRoleFromEmail = (email: string): Role => {
 export default function LoginScreen() {
   const router = useRouter();
   const { setUser } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('mhp@mindcare.com');
   const [password, setPassword] = useState('MHP123'); // Updated to match seed
   const [showPassword, setShowPassword] = useState(false);
@@ -77,27 +80,28 @@ export default function LoginScreen() {
         style={styles.content}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <LanguageSelector />
           <View style={styles.header}>
 
           <View style={styles.logoContainer}>
             <Ionicons name="heart" size={60} color={colors.primary} />
           </View>
           <Text style={styles.title}>MindCare Connect</Text>
-          <Text style={styles.subtitle}>Community Mental Health Follow-Up</Text>
+          <Text style={styles.subtitle}>{t('auth.sign_in_to_continue')}</Text>
         </View>
 
         <Card variant="elevated" style={styles.card}>
           <Card.Header>
-            <Text style={styles.cardTitle}>Login to Continue</Text>
+            <Text style={styles.cardTitle}>{t('auth.welcome_back')}</Text>
           </Card.Header>
 
           <Card.Content>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>Email Address</Text>
+              <Text style={styles.inputLabel}>{t('auth.email')}</Text>
               <Input
-                placeholder="your@email.com"
+                placeholder={t('auth.email_placeholder')}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -107,9 +111,9 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.fieldSpacingLarge}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={styles.inputLabel}>{t('auth.password')}</Text>
               <Input
-                placeholder="••••••••"
+                placeholder={t('auth.password_placeholder')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -136,12 +140,12 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 loading={loading}
               >
-                Login
+                {t('auth.login')}
               </Button>
             </View>
 
             <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={styles.forgotPasswordText}>{t('auth.forgot_password')}</Text>
             </TouchableOpacity>
           </Card.Content>
         </Card>
@@ -212,7 +216,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     ...typography.bodyBold,
-    color: colors.textPrimary,
+    color: colors.text,
     marginBottom: spacing.xs,
     marginLeft: 4,
   },

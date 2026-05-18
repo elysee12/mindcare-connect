@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/hooks/useAuth';
+import '@/i18n'; // Initialize i18n
 
 // Create a client for React Query
 const queryClient = new QueryClient({

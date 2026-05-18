@@ -148,7 +148,7 @@ export function LocationPicker({
                 Select {activePicker?.charAt(0).toUpperCase()}{activePicker?.slice(1)}
               </Text>
               <TouchableOpacity onPress={() => setActivePicker(null)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
             
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   mainLabel: {
     ...typography.h3,
-    color: colors.textPrimary,
+    color: colors.text,
     marginBottom: spacing.xs,
   },
   fieldWrapper: {
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     ...typography.body,
-    color: colors.textPrimary,
+    color: colors.text,
   },
   placeholderText: {
     color: colors.textTertiary,

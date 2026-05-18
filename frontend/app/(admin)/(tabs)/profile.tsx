@@ -4,13 +4,15 @@ import { Container, Card, Avatar, Button } from '@/components/ui';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
 
   const { data: userProfile, isLoading } = useQuery({
     queryKey: ['currentUserProfile', user?.id],
@@ -42,7 +44,7 @@ export default function ProfileScreen() {
     <Container safeArea edges={['top']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Profile</Text>
+          <Text style={styles.title}>{t('profile.title')}</Text>
           <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`/(shared)/view-notifications`)}>
             <Ionicons name="notifications-outline" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -52,28 +54,28 @@ export default function ProfileScreen() {
           <Card.Content style={styles.profileContent}>
             <Avatar
               source={null}
-              fallback={(myUser.fullName || myUser.full_name || 'A').substring(0, 1)}
+              fallback={(myUser.fullName || myUser.full_name || 'U').substring(0, 1)}
               size="xl"
               style={styles.avatar}
             />
             <Text style={styles.userName}>{myUser.fullName || myUser.full_name || ''}</Text>
-            <Text style={styles.userRole}>{displayRole} {displayArea ? `• ${displayArea}` : ''}</Text>
+            <Text style={styles.userRole}>{displayRole}{displayArea ? ` • ${displayArea}` : ''}</Text>
             <Text style={styles.userEmail}>{myUser.email || ''}</Text>
           </Card.Content>
         </Card>
 
-        <Text style={styles.sectionTitle}>Account Settings</Text>
+        <Text style={styles.sectionTitle}>{t('profile.account_settings')}</Text>
         <Card variant="elevated" style={styles.settingsCard}>
-          <SettingsItem icon="person-outline" label="Edit Profile" onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}`)} />
-          <SettingsItem icon="shield-checkmark-outline" label="Privacy & Security" onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=privacy`)} />
-          <SettingsItem icon="notifications-outline" label="Push Notifications" onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=notifications`)} />
-          <SettingsItem icon="help-circle-outline" label="Help & Support" onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=help`)} last />
+          <SettingsItem icon="person-outline" label={t('profile.edit_profile')} onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}`)} />
+          <SettingsItem icon="shield-checkmark-outline" label={t('profile.privacy_security')} onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=privacy`)} />
+          <SettingsItem icon="notifications-outline" label={t('profile.push_notifications')} onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=notifications`)} />
+          <SettingsItem icon="help-circle-outline" label={t('profile.help_support')} onPress={() => router.push(`/(shared)/account-settings?role=${currentRole}&tab=help`)} last />
         </Card>
 
-        <Text style={styles.sectionTitle}>App Preferences</Text>
+        <Text style={styles.sectionTitle}>{t('profile.app_preferences')}</Text>
         <Card variant="elevated" style={styles.settingsCard}>
-          <SettingsItem icon="moon-outline" label="Dark Mode" value="System" onPress={() => router.push(`/(shared)/app-preferences?role=${currentRole}&setting=dark_mode`)} />
-          <SettingsItem icon="globe-outline" label="Language" value="English" onPress={() => router.push(`/(shared)/app-preferences?role=${currentRole}&setting=language`)} last />
+          <SettingsItem icon="moon-outline" label={t('profile.dark_mode')} value={t('profile.system')} onPress={() => router.push(`/(shared)/app-preferences?role=${currentRole}&setting=dark_mode`)} />
+          <SettingsItem icon="globe-outline" label={t('profile.language')} value={i18n.language === 'rw' ? t('common.kinyarwanda') : t('common.english')} onPress={() => router.push(`/(shared)/app-preferences?role=${currentRole}&setting=language`)} last />
         </Card>
 
         <Button
@@ -83,7 +85,7 @@ export default function ProfileScreen() {
           style={styles.logoutBtn}
           textStyle={{ color: colors.error }}
         >
-          Logout
+          {t('profile.logout')}
         </Button>
 
         <View style={styles.footer}>

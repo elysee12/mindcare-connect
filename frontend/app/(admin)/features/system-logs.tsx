@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
   logCard: { padding: spacing.md, borderRadius: borderRadius.xl, ...shadows.sm, marginBottom: spacing.sm },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs },
-  logEvent: { ...typography.body, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
+  logEvent: { ...typography.body, color: colors.text, flex: 1, marginRight: spacing.sm },
   logTime: { ...typography.caption, color: colors.textSecondary },
   logUser: { ...typography.caption, color: colors.primary, fontStyle: 'italic' },
   buttonWrapper: { marginTop: spacing.md },

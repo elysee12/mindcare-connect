@@ -20,7 +20,26 @@ export class NotificationService {
   }
 
   async findOne(id: number) {
-    return this.prisma.notification.findUnique({ where: { id } });
+    return this.prisma.notification.findUnique({ 
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            role: true,
+            workplace: true,
+            province: true,
+            district: true,
+            sector: true,
+            cell: true,
+            village: true,
+          }
+        }
+      }
+    });
   }
 
   async update(id: number, updateNotificationDto: UpdateNotificationDto) {
@@ -29,5 +48,11 @@ export class NotificationService {
 
   async remove(id: number) {
     return this.prisma.notification.delete({ where: { id } });
+  }
+
+  async clearAll(userId: number) {
+    return this.prisma.notification.deleteMany({
+      where: { userId },
+    });
   }
 }

@@ -23,7 +23,7 @@ export class ReportService {
     });
   }
 
-  async findAll(mhpId?: number, search?: string, startDate?: Date, endDate?: Date) {
+  async findAll(mhpId?: number, search?: string, startDate?: Date, endDate?: Date, chwId?: number) {
     const conditions: any[] = [];
     
     if (mhpId !== undefined) {
@@ -33,6 +33,10 @@ export class ReportService {
           { mhpId }
         ]
       });
+    }
+
+    if (chwId !== undefined) {
+      conditions.push({ createdByChwId: chwId });
     }
 
     if (search) {
@@ -63,6 +67,24 @@ export class ReportService {
         createdByChw: true,
         mhp: true,
       },
+    });
+  }
+
+  async update(id: number, updateReportDto: Partial<CreateReportDto>) {
+    return this.prisma.report.update({
+      where: { id },
+      data: updateReportDto,
+      include: {
+        patient: true,
+        createdByChw: true,
+        mhp: true,
+      },
+    });
+  }
+
+  async remove(id: number) {
+    return this.prisma.report.delete({
+      where: { id },
     });
   }
 
