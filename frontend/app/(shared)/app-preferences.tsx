@@ -61,6 +61,11 @@ export default function AppPreferences() {
     }
 
     const themes: Array<'System' | 'Light' | 'Dark'> = ['System', 'Light', 'Dark'];
+    const themeLabels: Record<string, string> = {
+      System: t('preferences.theme_system'),
+      Light: t('preferences.theme_light'),
+      Dark: t('preferences.theme_dark'),
+    };
     return (
       <View>
         {themes.map((option) => (
@@ -69,7 +74,7 @@ export default function AppPreferences() {
             style={[styles.optionItem, theme === option && styles.optionItemActive]}
             onPress={() => setTheme(option)}
           >
-            <Text style={[styles.optionText, theme === option && styles.optionTextActive]}>{option}</Text>
+            <Text style={[styles.optionText, theme === option && styles.optionTextActive]}>{themeLabels[option]}</Text>
           </TouchableOpacity>
         ))}
       </View>

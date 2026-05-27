@@ -21,6 +21,7 @@ export class ReportController {
       type: 'report_submitted',
       title: 'Report Submitted',
       message: `A new report has been submitted.`,
+      metadata: JSON.stringify({ reportTitle: report.title }),
       userId: req.user.id,
     });
     return report;
@@ -38,17 +39,20 @@ export class ReportController {
     @Req() req?: any,
   ) {
     const currentUserId = req?.user?.id;
-    let effectiveMhpId = mhpId ? +mhpId : undefined;
-    let effectiveChwId = chwId ? +chwId : undefined;
+    let effectiveMhpId = mhpId && !isNaN(+mhpId) ? +mhpId : undefined;
+    let effectiveChwId = chwId && !isNaN(+chwId) ? +chwId : undefined;
 
-    // If MHP is logged in and no explicit mhpId provided, filter to their own data
-    if (currentUserId && !mhpId && !chwId) {
+    if (currentUserId && !effectiveMhpId && !effectiveChwId) {
       const currentUser = await this.prisma.user.findUnique({
         where: { id: currentUserId },
       });
 
-      if (currentUser && currentUser.role === 'MHP') {
-        effectiveMhpId = currentUserId;
+      if (currentUser) {
+        if (currentUser.role === 'MHP') {
+          effectiveMhpId = currentUserId;
+        } else if (currentUser.role === 'CHW') {
+          effectiveChwId = currentUserId;
+        }
       }
     }
 

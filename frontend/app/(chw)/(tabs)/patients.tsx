@@ -150,7 +150,7 @@ export default function PatientsScreen() {
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text style={styles.patientName}>{item.fullName || item.full_name || t('patients.unknown')}</Text>
             <Text style={styles.patientDetail}>ID: {formatPatientId(item.id)}</Text>
-            <Text style={styles.patientDetail}>{t('patients.status')}: {item.status}</Text>
+            <Text style={styles.patientDetail}>{t('patients.status')}: {t(`status_values.${item.status}`, { defaultValue: item.status })}</Text>
           </View>
         </View>
         <View style={styles.actions}>
@@ -255,7 +255,7 @@ export default function PatientsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={60} color={colors.border} />
-            <Text style={styles.emptyText}>No {userRole === 'admin' ? 'users' : 'patients'} found</Text>
+            <Text style={styles.emptyText}>No {userRole === 'admin' ? t('dashboard.user_management') : t('patients.title')} found</Text>
           </View>
         }
       />

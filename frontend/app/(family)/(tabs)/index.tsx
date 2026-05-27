@@ -7,11 +7,14 @@ import { colors, spacing, typography, shadows, borderRadius } from '@/constants/
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
+import { translateNotifications, TranslatedNotification } from '@/lib/notificationTranslation';
 
 export default function FamilyDashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const activeName = user?.fullName || user?.full_name || 'Family Member';
+  const { t } = useTranslation();
+  const activeName = user?.fullName || user?.full_name || t('family.dashboard_title');
   const [showNotifications, setShowNotifications] = useState(false);
 
   const { data: stats } = useQuery({
@@ -21,19 +24,23 @@ export default function FamilyDashboard() {
     enabled: !!user?.id,
   });
 
-  const { data: recentUpdates } = useQuery({
+  const { data: rawUpdates } = useQuery({
     queryKey: ['recentUpdates', user?.id],
     queryFn: async () => api.notifications(user?.id),
     staleTime: 1000 * 30,
     enabled: !!user?.id,
   });
 
+  const recentUpdates: TranslatedNotification[] = rawUpdates
+    ? translateNotifications(rawUpdates, t)
+    : [];
+
   return (
     <Container safeArea edges={['top']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcomeText}>Welcome back</Text>
+            <Text style={styles.welcomeText}>{t('dashboard.welcome_back')}</Text>
             <Text style={styles.nameText}>{activeName}</Text>
           </View>
           <TouchableOpacity 
@@ -41,7 +48,7 @@ export default function FamilyDashboard() {
             onPress={() => setShowNotifications(true)}
           >
             <Ionicons name="notifications-outline" size={24} color={colors.text} />
-            {recentUpdates && recentUpdates.some(n => !n.isRead) && (
+            {recentUpdates.some(n => !n.isRead) && (
               <View style={styles.notificationBadge} />
             )}
           </TouchableOpacity>
@@ -49,47 +56,47 @@ export default function FamilyDashboard() {
 
         <View style={styles.dashboard}>
           <Card variant="elevated" style={{ ...styles.heroCard, backgroundColor: colors.primaryTint }}>
-            <Text style={[styles.heroTitle, { color: colors.primaryDark }]}>Family Support Overview</Text>
+            <Text style={[styles.heroTitle, { color: colors.primaryDark }]}>{t('family.dashboard_title')}</Text>
             <View style={styles.heroStatsRow}>
               <View style={styles.heroStatItem}>
                 <Text style={[styles.heroStatValue, { color: colors.primary }]}>{stats?.totalPatients || 0}</Text>
-                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>Assigned</Text>
+                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>{t('family.assigned')}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
                 <Text style={[styles.heroStatValue, { color: colors.info }]}>{stats?.totalAppointments || 0}</Text>
-                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>Total Appointments</Text>
+                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>{t('family.total_appointments')}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
                 <Text style={[styles.heroStatValue, { color: colors.success }]}>{stats?.totalTreatments || 0}</Text>
-                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>Total Treatments</Text>
+                <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>{t('family.total_treatments')}</Text>
               </View>
             </View>
           </Card>
 
-          <Text style={styles.sectionTitle}>Family Actions</Text>
+          <Text style={styles.sectionTitle}>{t('family.family_actions')}</Text>
           <View style={styles.actionsGrid}>
-            <ActionCard title="Appointment Records" icon="calendar-outline" color={colors.primaryLight} route="/(family)/features/appointment-records" />
-            <ActionCard title="View Treatment Changes" icon="flask-outline" color={colors.successLight} route="/(family)/features/view-treatment-changes" />
+            <ActionCard title={t('family.appointment_records')} icon="calendar-outline" color={colors.primaryLight} route="/(family)/features/appointment-records" />
+            <ActionCard title={t('family.view_treatment_changes')} icon="flask-outline" color={colors.successLight} route="/(family)/features/view-treatment-changes" />
           </View>
 
-          <Text style={styles.sectionTitle}>Recent Updates</Text>
-          {recentUpdates?.slice(0, 3).map((update) => (
+          <Text style={styles.sectionTitle}>{t('family.recent_updates')}</Text>
+          {recentUpdates.slice(0, 3).map((update) => (
             <Card key={update.id} style={styles.updateCard}>
               <View style={styles.updateContent}>
                 <View style={[styles.updateIcon, { backgroundColor: colors.primaryTint }]}>
                   <Ionicons name="notifications" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.updateText}>
-                  <Text style={styles.updateTitle}>{update.title}</Text>
-                  <Text style={styles.updateMessage} numberOfLines={1}>{update.message}</Text>
+                  <Text style={styles.updateTitle}>{update.translatedTitle}</Text>
+                  <Text style={styles.updateMessage} numberOfLines={1}>{update.translatedMessage}</Text>
                 </View>
               </View>
             </Card>
           ))}
-          {(!recentUpdates || recentUpdates.length === 0) && (
-            <Text style={styles.emptyText}>No recent updates found</Text>
+          {recentUpdates.length === 0 && (
+            <Text style={styles.emptyText}>{t('family.no_updates')}</Text>
           )}
         </View>
       </ScrollView>
@@ -103,14 +110,14 @@ export default function FamilyDashboard() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Notifications</Text>
+              <Text style={styles.modalTitle}>{t('dashboard.notifications')}</Text>
               <TouchableOpacity onPress={() => setShowNotifications(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
             
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalList}>
-              {recentUpdates && recentUpdates.length > 0 ? (
+              {recentUpdates.length > 0 ? (
                 recentUpdates.map((update) => (
                   <Card key={update.id} style={styles.modalUpdateCard}>
                     <View style={styles.updateContent}>
@@ -118,8 +125,8 @@ export default function FamilyDashboard() {
                         <Ionicons name="notifications" size={20} color={colors.primary} />
                       </View>
                       <View style={styles.updateText}>
-                        <Text style={styles.updateTitle}>{update.title}</Text>
-                        <Text style={styles.updateMessage}>{update.message}</Text>
+                        <Text style={styles.updateTitle}>{update.translatedTitle}</Text>
+                        <Text style={styles.updateMessage}>{update.translatedMessage}</Text>
                         <Text style={styles.updateDate}>{new Date(update.createdAt).toLocaleString()}</Text>
                       </View>
                     </View>
@@ -128,7 +135,7 @@ export default function FamilyDashboard() {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-                  <Text style={styles.emptyText}>No notifications yet</Text>
+                  <Text style={styles.emptyText}>{t('dashboard.no_notifications')}</Text>
                 </View>
               )}
             </ScrollView>
@@ -162,214 +169,40 @@ function ActionCard({ title, icon, color, route }: { title: string; icon: keyof 
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.backgroundSecondary,
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  welcomeText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  nameText: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.sm,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.error,
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  dashboard: {
-    gap: spacing.lg,
-  },
-  heroCard: {
-    padding: spacing.xl,
-    borderRadius: borderRadius.xxl,
-    ...shadows.md,
-  },
-  heroTitle: {
-    ...typography.h3,
-    color: colors.white,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  heroStatValue: {
-    ...typography.h1,
-    color: colors.white,
-  },
-  heroStatLabel: {
-    ...typography.tiny,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginTop: spacing.sm,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  actionCard: {
-    flex: 1,
-    minWidth: 150,
-    backgroundColor: colors.background,
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.primaryTint,
-    ...shadows.md,
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  actionTitle: {
-    ...typography.captionBold,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  actionChevron: {
-    width: 28,
-    height: 28,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionTitle: {
-    ...typography.bodyBold,
-    marginTop: spacing.sm,
-  },
-  actionChevron: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  updateCard: {
-    marginBottom: spacing.xs,
-  },
-  updateContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  updateIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  updateText: {
-    flex: 1,
-  },
-  updateTitle: {
-    ...typography.bodyBold,
-    color: colors.text,
-  },
-  updateMessage: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  updateDate: {
-    ...typography.tiny,
-    color: colors.textTertiary,
-    marginTop: 4,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginTop: spacing.lg,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.backgroundSecondary,
-    borderTopLeftRadius: borderRadius.xxl,
-    borderTopRightRadius: borderRadius.xxl,
-    height: '80%',
-    padding: spacing.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  modalList: {
-    paddingBottom: spacing.xl,
-  },
-  modalUpdateCard: {
-    marginBottom: spacing.sm,
-    backgroundColor: colors.background,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxxl,
-  },
+  container: { backgroundColor: colors.backgroundSecondary, flex: 1 },
+  scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxxl },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
+  welcomeText: { ...typography.caption, color: colors.textSecondary },
+  nameText: { ...typography.h2, color: colors.text },
+  notificationBtn: { width: 44, height: 44, borderRadius: borderRadius.lg, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', ...shadows.sm },
+  notificationBadge: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.error, borderWidth: 2, borderColor: colors.background },
+  dashboard: { gap: spacing.lg },
+  heroCard: { padding: spacing.xl, borderRadius: borderRadius.xxl, ...shadows.md },
+  heroTitle: { ...typography.h3, marginBottom: spacing.xl, textAlign: 'center' },
+  heroStatsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroStatItem: { flex: 1, alignItems: 'center' },
+  heroStatValue: { ...typography.h1 },
+  heroStatLabel: { ...typography.tiny, textAlign: 'center' },
+  heroStatDivider: { width: 1, height: 40, backgroundColor: colors.border },
+  sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.sm },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  actionCard: { flex: 1, minWidth: 150, backgroundColor: colors.background, padding: spacing.md, borderRadius: borderRadius.xl, alignItems: 'center', justifyContent: 'space-between', ...shadows.md },
+  actionIconContainer: { width: 56, height: 56, borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+  actionTitle: { ...typography.captionBold, textAlign: 'center', marginBottom: spacing.xs },
+  actionChevron: { width: 28, height: 28, borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center' },
+  updateCard: { marginBottom: spacing.xs },
+  updateContent: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
+  updateIcon: { width: 40, height: 40, borderRadius: borderRadius.md, justifyContent: 'center', alignItems: 'center' },
+  updateText: { flex: 1 },
+  updateTitle: { ...typography.bodyBold, color: colors.text },
+  updateMessage: { ...typography.caption, color: colors.textSecondary },
+  updateDate: { ...typography.tiny, color: colors.textTertiary, marginTop: 4 },
+  emptyText: { ...typography.body, color: colors.textTertiary, textAlign: 'center', marginTop: spacing.lg },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.backgroundSecondary, borderTopLeftRadius: borderRadius.xxl, borderTopRightRadius: borderRadius.xxl, height: '80%', padding: spacing.lg },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { ...typography.h2, color: colors.text },
+  modalList: { paddingBottom: spacing.xl },
+  modalUpdateCard: { marginBottom: spacing.sm, backgroundColor: colors.background },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxxl },
 });

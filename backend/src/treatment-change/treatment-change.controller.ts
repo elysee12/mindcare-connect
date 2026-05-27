@@ -18,12 +18,14 @@ export class TreatmentChangeController {
   @UseGuards(JwtAuthGuard)
   async create(@Body() createTreatmentChangeDto: CreateTreatmentChangeDto, @Req() req) {
     const treatmentChange = await this.treatmentChangeService.create(createTreatmentChangeDto);
-    
+    const meta = JSON.stringify({ patientName: treatmentChange.patient.fullName });
+
     // Notify the creator (MHP)
     await this.notificationService.create({
       type: 'treatment_change_created',
       title: 'Treatment Change Recorded',
       message: `Treatment change for patient ${treatmentChange.patient.fullName} has been recorded.`,
+      metadata: meta,
       userId: req.user.id,
     });
 
@@ -33,6 +35,7 @@ export class TreatmentChangeController {
         type: 'treatment_change_created',
         title: 'Patient Treatment Updated',
         message: `Treatment for your patient ${treatmentChange.patient.fullName} has been updated.`,
+        metadata: meta,
         userId: treatmentChange.patient.assignedChwId,
       });
     }
@@ -43,6 +46,7 @@ export class TreatmentChangeController {
         type: 'treatment_change_created',
         title: 'Treatment Update',
         message: `Clinical treatment for ${treatmentChange.patient.fullName} has been updated by MHP.`,
+        metadata: meta,
         userId: treatmentChange.patient.assignedFamilyId,
       });
     }
@@ -57,7 +61,6 @@ export class TreatmentChangeController {
     let effectiveMhpId: number | undefined = undefined;
     let effectiveFamilyId: number | undefined = undefined;
 
-    // If MHP is logged in, filter to their own data
     if (currentUserId) {
       const currentUser = await this.prisma.user.findUnique({
         where: { id: currentUserId },

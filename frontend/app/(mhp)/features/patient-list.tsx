@@ -7,12 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatPatientId } from '@/lib/format';
+import { useTranslation } from 'react-i18next';
 
 export default function PatientList() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role, userId } = useLocalSearchParams<{ role?: string; userId?: string }>();
   const [status, setStatus] = useState('');
-
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patientList', role, userId],
     queryFn: () => api.patients('', role, undefined, role === 'chw' ? userId : undefined),
@@ -48,7 +49,7 @@ export default function PatientList() {
               <View style={styles.patientInfo}>
                 <Text style={styles.cardTitle}>{p.fullName}</Text>
                 <Text style={styles.cardSubtitle}>ID: {formatPatientId(p.id)}</Text>
-                <Text style={styles.cardSubtitle}>Family: {p.assignedFamily?.fullName ?? 'Unassigned'}</Text>
+                <Text style={styles.cardSubtitle}>Family: {p.assignedFamily?.fullName ?? t('patient_detail.unassigned')}</Text>
               </View>
             </View>
           </Card>

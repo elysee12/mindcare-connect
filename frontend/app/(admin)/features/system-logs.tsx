@@ -6,9 +6,11 @@ import { api } from '@/lib/api';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 export default function SystemLogs() {
   const router = useRouter();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState('');
 
@@ -21,68 +23,55 @@ export default function SystemLogs() {
     mutationFn: () => api.clearLogs(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['systemLogs'] });
-      setStatus('Logs cleared successfully');
+      setStatus(t('system_logs.cleared'));
       setTimeout(() => setStatus(''), 3000);
     },
     onError: () => {
-      setStatus('Failed to clear logs');
+      setStatus(t('system_logs.clear_failed'));
       setTimeout(() => setStatus(''), 3000);
     },
   });
 
-  const handleClearLogs = () => {
-    clearLogsMutation.mutate();
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   return (
-    <Container safeArea edges={[ 'top', 'bottom' ]} style={styles.container}>
+    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
       <View style={styles.headbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>System Logs</Text>
-        <Text style={styles.subtitle}>Recent platform activity</Text>
+        <Text style={styles.title}>{t('system_logs.title')}</Text>
+        <Text style={styles.subtitle}>{t('system_logs.subtitle')}</Text>
 
         {isLoading ? (
-          <Text style={styles.subtitle}>Loading logs...</Text>
+          <Text style={styles.subtitle}>{t('system_logs.loading')}</Text>
         ) : logs && Array.isArray(logs) && logs.length > 0 ? (
           logs.map((item: any) => (
             <Card key={item.id} style={styles.logCard} variant="elevated">
               <View style={styles.logHeader}>
                 <Text style={styles.logEvent}>{item.event}</Text>
-                <Text style={styles.logTime}>{formatDate(item.createdAt)}</Text>
+                <Text style={styles.logTime}>{new Date(item.createdAt).toLocaleString()}</Text>
               </View>
               {item.user && (
                 <Text style={styles.logUser}>
-                  User: {item.user.fullName} ({item.user.email})
+                  {t('system_logs.user_label')}: {item.user.fullName} ({item.user.email})
                 </Text>
               )}
             </Card>
           ))
         ) : (
-          <Text style={styles.subtitle}>No logs found.</Text>
+          <Text style={styles.subtitle}>{t('system_logs.no_logs')}</Text>
         )}
 
         <View style={styles.buttonWrapper}>
-          <Button
-            variant="primary"
-            fullWidth
-            onPress={handleClearLogs}
-            disabled={clearLogsMutation.isPending}
-          >
-            {clearLogsMutation.isPending ? 'Clearing...' : 'Clear Logs'}
+          <Button variant="primary" fullWidth onPress={() => clearLogsMutation.mutate()} disabled={clearLogsMutation.isPending}>
+            {clearLogsMutation.isPending ? t('system_logs.clearing') : t('system_logs.clear_btn')}
           </Button>
         </View>
 
         {status ? (
-          <Text style={[styles.toast, status.includes('Failed') ? styles.errorToast : styles.successToast]}>
+          <Text style={[styles.toast, status === t('system_logs.clear_failed') ? styles.errorToast : styles.successToast]}>
             {status}
           </Text>
         ) : null}

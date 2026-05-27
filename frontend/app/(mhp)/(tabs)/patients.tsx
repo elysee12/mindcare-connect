@@ -7,6 +7,7 @@ import { colors, spacing, typography, shadows, borderRadius } from '@/constants/
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 interface Patient {
   id: number;
@@ -23,6 +24,7 @@ interface Patient {
 
 export default function PatientManagementTab() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role, userId } = useLocalSearchParams<{ role: string; userId: string }>();
   const userRole = role?.toLowerCase() || 'mhp';
 
@@ -53,17 +55,17 @@ export default function PatientManagementTab() {
   };
 
   const handleDeletePatient = (patientId: string) => {
-    Alert.alert('Delete Patient', 'Are you sure you want to delete this patient?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('patients.delete_patient_title'), t('patients.delete_patient_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await api.deletePatient(patientId);
             refetch();
           } catch (error: any) {
-            Alert.alert('Unable to delete patient', error?.message || 'Please try again.');
+            Alert.alert(t('common.error'), error?.message || 'Please try again.');
           }
         },
       },
@@ -74,7 +76,7 @@ export default function PatientManagementTab() {
     <Container safeArea edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Patient Management</Text>
+          <Text style={styles.title}>{t('dashboard.patient_management')}</Text>
         </View>
         <Button
           variant="primary"
@@ -82,12 +84,12 @@ export default function PatientManagementTab() {
           leftIcon={<Ionicons name="person-add" size={16} color={colors.white} />}
           size="sm"
         >
-          Register
+          {t('register_patient.register_btn')}
         </Button>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Manage patient records</Text>
+        <Text style={styles.sectionTitle}>{t('patients.title')}</Text>
 
         <View style={styles.items}>
           {patients.map((patient) => (
@@ -99,7 +101,7 @@ export default function PatientManagementTab() {
                     <Text style={styles.patientId}>{`P${String(patient.id).padStart(3, '0')}`}</Text>
                     <View style={styles.badgeContainer}>
                       <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{patient.diagnosis || 'No Diagnosis'}</Text>
+                        <Text style={styles.badgeText}>{patient.diagnosis || t('common.na')}</Text>
                       </View>
                     </View>
                   </View>
@@ -107,30 +109,30 @@ export default function PatientManagementTab() {
 
                 <View style={styles.detailsGrid}>
                   <View style={styles.detailColumn}>
-                    <Text style={styles.detailLabel}>Age</Text>
+                    <Text style={styles.detailLabel}>{t('patient_detail.age')}</Text>
                     <Text style={styles.detailValue}>{patient.age}</Text>
                   </View>
                   <View style={styles.detailColumn}>
-                    <Text style={styles.detailLabel}>Gender</Text>
-                    <Text style={styles.detailValue}>{patient.gender}</Text>
+                    <Text style={styles.detailLabel}>{t('patient_detail.gender')}</Text>
+                    <Text style={styles.detailValue}>{t(`status_values.${patient.gender}`, { defaultValue: patient.gender })}</Text>
                   </View>
                 </View>
 
                 <View style={styles.sections}>
                   {patient.contact && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionLabel}>Contact</Text>
+                      <Text style={styles.sectionLabel}>{t('patient_detail.contact')}</Text>
                       <Text style={styles.sectionValue}>{patient.contact}</Text>
                     </View>
                   )}
                   <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>Status</Text>
-                    <Text style={styles.sectionValue}>{patient.status || 'Unknown'}</Text>
+                    <Text style={styles.sectionLabel}>{t('patient_detail.status')}</Text>
+                    <Text style={styles.sectionValue}>{t(`status_values.${patient.status}`, { defaultValue: patient.status || t('common.unknown') })}</Text>
                   </View>
                   {patient.riskLevel && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionLabel}>Risk Level</Text>
-                      <Text style={styles.sectionValue}>{patient.riskLevel}</Text>
+                      <Text style={styles.sectionLabel}>{t('patient_detail.risk_level')}</Text>
+                      <Text style={styles.sectionValue}>{t(`status_values.${patient.riskLevel}`, { defaultValue: patient.riskLevel })}</Text>
                     </View>
                   )}
                 </View>
@@ -138,11 +140,11 @@ export default function PatientManagementTab() {
                 <View style={styles.actionsRow}>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => handleEditPatient(patient)}>
                     <Ionicons name="create" size={18} color={colors.primary} />
-                    <Text style={styles.actionText}>Edit</Text>
+                    <Text style={styles.actionText}>{t('patients.action_view')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDeletePatient(patient.id)}>
                     <Ionicons name="trash" size={18} color={colors.errorDark} />
-                    <Text style={[styles.actionText, { color: colors.errorDark }]}>Delete</Text>
+                    <Text style={[styles.actionText, { color: colors.errorDark }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

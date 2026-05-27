@@ -1,166 +1,155 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 
+/**
+ * MailService — uses Brevo's HTTP Transactional Email API.
+ *
+ * Why HTTP instead of SMTP?
+ * Render's free tier blocks outbound SMTP connections (ports 25, 465, 587).
+ * Brevo's REST API goes over HTTPS (port 443) which is always open.
+ *
+ * Required environment variables:
+ *   BREVO_API_KEY   — your Brevo API key (v3)
+ *   MAIL_FROM       — sender address verified in Brevo (optional, defaults below)
+ *   MAIL_FROM_NAME  — sender display name (optional)
+ */
 @Injectable()
 export class MailService implements OnModuleInit {
-  private transporter: nodemailer.Transporter | null = null;
   private readonly logger = new Logger(MailService.name);
-  private fromEmail: string = 'noreply@mindcareconnect.com';
+  private apiInstance: Brevo.TransactionalEmailsApi | null = null;
+  private fromEmail = 'noreply@mindcareconnect.com';
+  private fromName = 'MindCare Connect';
 
-  async onModuleInit() {
-    // Gmail SMTP credentials from .env
-    let host = process.env.EMAIL_HOST || 'smtp.gmail.com';
-    let port = parseInt(process.env.EMAIL_PORT || '587', 10);
-    let user = process.env.SMTP_USER; // Matches .env key
-    let pass = process.env.SMTP_PASS; // Matches .env key
-    
-    this.logger.log(`[MailService] Initializing with EMAIL_HOST=${host}, EMAIL_PORT=${port}`);
-    this.logger.log(`[MailService] SMTP_USER=${user ? '***configured***' : 'NOT SET'}`);
-    this.logger.log(`[MailService] SMTP_PASS=${pass ? '***configured***' : 'NOT SET'}`);
-    
-    this.fromEmail = process.env.MAIL_FROM || user || 'noreply@mindcareconnect.com';
+  onModuleInit() {
+    const apiKey = process.env.BREVO_API_KEY?.trim();
 
-    // Do NOT automatically generate test credentials if SMTP_USER is provided
-    if (!user || !pass) {
-      this.logger.warn('[MailService] SMTP_USER or SMTP_PASS not found. Email will fall back to test mode.');
-      try {
-        const testAccount = await nodemailer.createTestAccount();
-        user = testAccount.user;
-        pass = testAccount.pass;
-        host = testAccount.smtp.host;
-        port = testAccount.smtp.port;
-        this.fromEmail = `noreply@mindcareconnect.com`;
-        this.logger.log(`[MailService] Test account generated. Preview emails at https://ethereal.email`);
-      } catch (error: any) {
-        this.logger.error('[MailService] Failed to create test account', error?.message);
-        return;
-      }
+    if (!apiKey) {
+      this.logger.error(
+        '[MailService] ❌ BREVO_API_KEY is not set. Emails will NOT be sent.',
+      );
+      return;
     }
 
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: {
-        user,
-        pass,
-      },
-      // Force IPv4 to avoid ENETUNREACH errors on cloud platforms like Render
-      // which often have issues with IPv6 SMTP routing.
-      ...(host.includes('gmail.com') || host.includes('googlemail.com') ? { family: 4 } : {}),
-    } as any);
+    // Configure the Brevo SDK with the API key
+    const defaultClient = Brevo.ApiClient.instance;
+    const apiKeyAuth = defaultClient.authentications['api-key'];
+    apiKeyAuth.apiKey = apiKey;
 
-    // Verify connection configuration
-    try {
-      await this.transporter.verify();
-      this.logger.log(`[MailService] ✅ Mail transporter verified successfully (${host}:${port})`);
-    } catch (error: any) {
-      this.logger.error(`[MailService] ❌ Mail transporter verification failed: ${error?.message || 'Unknown error'}`);
-      this.logger.warn('[MailService] Attempting fallback to Ethereal test mode...');
-      
-      // Fallback to Ethereal if provided credentials fail
-      try {
-        const testAccount = await nodemailer.createTestAccount();
-        this.transporter = nodemailer.createTransport({
-          host: testAccount.smtp.host,
-          port: testAccount.smtp.port,
-          secure: testAccount.smtp.secure,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
-        });
-        this.fromEmail = 'noreply@mindcareconnect.com';
-        this.logger.log('[MailService] ✅ Fallback Ethereal transporter created. Check emails at https://ethereal.email');
-      } catch (fallbackError: any) {
-        this.logger.error('[MailService] ❌ Failed to create fallback Ethereal transporter', fallbackError?.message);
-      }
-    }
+    this.apiInstance = new Brevo.TransactionalEmailsApi();
+
+    this.fromEmail =
+      process.env.MAIL_FROM?.trim() || 'noreply@mindcareconnect.com';
+    this.fromName =
+      process.env.MAIL_FROM_NAME?.trim() || 'MindCare Connect';
+
+    this.logger.log(
+      `[MailService] ✅ Brevo HTTP API configured. Sending from: ${this.fromName} <${this.fromEmail}>`,
+    );
   }
 
-  async sendMail(to: string, subject: string, html: string) {
-    if (!this.transporter) {
-      this.logger.error('[MailService] Mail transporter not initialized. Cannot send email.');
-      throw new Error('Mail transporter not initialized');
+  /**
+   * Core send method — all other helpers call this.
+   */
+  async sendMail(to: string, subject: string, html: string): Promise<void> {
+    if (!this.apiInstance) {
+      this.logger.error(
+        '[MailService] Brevo API not initialised (missing BREVO_API_KEY). Skipping email.',
+      );
+      return;
     }
 
-    try {
-      this.logger.log(`[MailService] Sending email to ${to} with subject: "${subject}"`);
-      const info = await this.transporter.sendMail({
-        from: `"MindCare Connect" <${this.fromEmail}>`,
-        to,
-        subject,
-        html,
-      });
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = { name: this.fromName, email: this.fromEmail };
+    sendSmtpEmail.to = [{ email: to }];
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.htmlContent = html;
 
-      this.logger.log(`[MailService] ✅ Email sent successfully to ${to} (MessageID: ${info.messageId})`);
-      
-      // If using Ethereal, log the preview URL
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) {
-        this.logger.log(`[MailService] 📧 Test email preview: ${previewUrl}`);
-      }
-      
-      return info;
+    try {
+      const result = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
+      this.logger.log(
+        `[MailService] ✅ Email sent to ${to} — messageId: ${(result as any)?.body?.messageId ?? 'n/a'}`,
+      );
     } catch (error: any) {
-      this.logger.error(`[MailService] ❌ Failed to send email to ${to}`, error?.message);
-      this.logger.error(`[MailService] Error stack:`, error?.stack);
+      this.logger.error(
+        `[MailService] ❌ Failed to send email to ${to}: ${error?.message ?? error}`,
+      );
+      // Re-throw so callers can handle failures if needed
       throw error;
     }
   }
 
-  async sendOtp(to: string, otp: string) {
+  // ─── Email templates ────────────────────────────────────────────────────────
+
+  async sendOtp(to: string, otp: string): Promise<void> {
     const subject = 'Your MindCare Connect OTP Code';
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4A90E2;">MindCare Connect</h2>
+        <h2 style="color: #2EB67D;">MindCare Connect</h2>
         <p>You requested an OTP to reset your password.</p>
-        <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
-          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4A90E2;">${otp}</span>
+        <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px;
+                    text-align: center; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px;
+                       color: #2EB67D;">${otp}</span>
         </div>
-        <p>This code will expire in 10 minutes.</p>
+        <p>This code will expire in <strong>10 minutes</strong>.</p>
         <p>If you didn't request this, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;" />
-        <p style="font-size: 12px; color: #777;">&copy; 2026 MindCare Connect. All rights reserved.</p>
+        <p style="font-size: 12px; color: #777;">
+          &copy; 2026 MindCare Connect. All rights reserved.
+        </p>
       </div>
     `;
     return this.sendMail(to, subject, html);
   }
 
-  async sendWelcomeEmail(to: string, fullName: string, role: string, password?: string) {
+  async sendWelcomeEmail(
+    to: string,
+    fullName: string,
+    role: string,
+    password?: string,
+  ): Promise<void> {
     const subject = 'Welcome to MindCare Connect';
-    // Use the deep link scheme defined in app.json
-    const appUrl = 'mindcare-dashboard://'; 
-    
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #2EB67D; margin: 0;">MindCare Connect</h2>
-          <p style="color: #666; font-size: 14px; margin-top: 5px;">Community Mental Health Follow-Up</p>
-        </div>
+    const appUrl = 'mindcare-dashboard://';
 
-        <h3 style="color: #333;">Welcome to the Platform, ${fullName}!</h3>
-        <p>You have been successfully added as a <strong>${role}</strong> to MindCare Connect.</p>
-        
-        <p>Our mission is to improve community mental health by facilitating coordination between Healthcare Professionals, Community Health Workers, and Family Members.</p>
-        
-        ${password ? `
-        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2EB67D;">
+    const credentialsBlock = password
+      ? `
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px;
+                    margin: 25px 0; border-left: 4px solid #2EB67D;">
           <p style="margin: 0; color: #444;"><strong>Your Temporary Credentials:</strong></p>
           <p style="margin: 10px 0 5px 0;"><strong>Email:</strong> ${to}</p>
-          <p style="margin: 0;"><strong>Password:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 6px; border-radius: 3px; font-size: 16px;">${password}</span></p>
-          <p style="margin: 15px 0 0 0; font-size: 13px; color: #888;">Note: Please change your password immediately after your first login for security.</p>
-        </div>
-        ` : ''}
+          <p style="margin: 0;"><strong>Password:</strong>
+            <span style="font-family: monospace; background: #eee; padding: 2px 6px;
+                         border-radius: 3px; font-size: 16px;">${password}</span>
+          </p>
+          <p style="margin: 15px 0 0 0; font-size: 13px; color: #888;">
+            Please change your password immediately after your first login.
+          </p>
+        </div>`
+      : '';
 
-        <div style="text-align: center; margin: 35px 0;">
-          <a href="${appUrl}" style="background-color: #2EB67D; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(46, 182, 125, 0.2);">Launch MindCare Connect</a>
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;
+                  max-width: 600px; margin: 0 auto; border: 1px solid #eee;
+                  border-radius: 10px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #2EB67D; margin: 0;">MindCare Connect</h2>
+          <p style="color: #666; font-size: 14px; margin-top: 5px;">
+            Community Mental Health Follow-Up
+          </p>
         </div>
-        
-        <p style="font-size: 13px; color: #999; text-align: center;">If the button above doesn't work, you can open the app using this link: <br/> 
-          <a href="${appUrl}" style="color: #2EB67D;">${appUrl}</a>
-        </p>
-        
+        <h3 style="color: #333;">Welcome to the Platform, ${fullName}!</h3>
+        <p>You have been successfully added as a <strong>${role}</strong> to MindCare Connect.</p>
+        <p>Our mission is to improve community mental health by facilitating coordination
+           between Healthcare Professionals, Community Health Workers, and Family Members.</p>
+        ${credentialsBlock}
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${appUrl}"
+             style="background-color: #2EB67D; color: white; padding: 14px 30px;
+                    text-decoration: none; border-radius: 8px; font-weight: bold;
+                    display: inline-block; font-size: 16px;">
+            Launch MindCare Connect
+          </a>
+        </div>
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
         <p style="font-size: 11px; color: #aaa; text-align: center; line-height: 1.5;">
           &copy; 2026 MindCare Connect. All rights reserved.<br/>
@@ -171,75 +160,80 @@ export class MailService implements OnModuleInit {
     return this.sendMail(to, subject, html);
   }
 
-  async sendAppointmentEmail(to: string, data: { 
-    patientName: string; 
-    appointmentTitle: string; 
-    appointmentTime: string; 
-    type: 'creation' | 'reminder';
-  }) {
+  async sendAppointmentEmail(
+    to: string,
+    data: {
+      patientName: string;
+      appointmentTitle: string;
+      appointmentTime: string;
+      type: 'creation' | 'reminder';
+    },
+  ): Promise<void> {
     const isReminder = data.type === 'reminder';
-    const subject = isReminder 
-      ? `Reminder: 1 Day Until Appointment - ${data.patientName}`
-      : `New Appointment Scheduled - ${data.patientName}`;
 
-    const titleText = isReminder 
-      ? 'Appointment Reminder' 
+    const subject = isReminder
+      ? `Reminder: 1 Day Until Appointment — ${data.patientName}`
+      : `New Appointment Scheduled — ${data.patientName}`;
+
+    const titleText = isReminder
+      ? 'Appointment Reminder'
       : 'New Appointment Scheduled';
-    
+
     const bodyText = isReminder
-      ? `This is a friendly reminder that there is only 1 day (24 hours) remaining until the scheduled appointment for <strong>${data.patientName}</strong>.`
-      : `A new appointment has been scheduled for <strong>${data.patientName}</strong>. Please find the details below.`;
+      ? `This is a friendly reminder that there is only 1 day (24 hours) remaining
+         until the scheduled appointment for <strong>${data.patientName}</strong>.`
+      : `A new appointment has been scheduled for <strong>${data.patientName}</strong>.
+         Please find the details below.`;
 
     const html = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #F8FAFC; color: #64748B; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #E2E8F0; }
-          .header { background-color: #2EB67D; padding: 30px 20px; text-align: center; }
-          .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
-          .content { padding: 40px 30px; line-height: 1.6; }
-          .content p { margin-bottom: 20px; font-size: 16px; color: #475569; }
-          .appointment-box { background-color: #F1F5F9; border-radius: 8px; padding: 25px; margin: 25px 0; border-left: 4px solid #2EB67D; }
-          .info-row { margin-bottom: 12px; display: flex; align-items: baseline; }
-          .info-label { font-weight: 600; color: #1E293B; width: 100px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.025em; }
-          .info-value { color: #334155; font-size: 16px; }
-          .footer { background-color: #F8FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0; }
-          .footer p { font-size: 13px; color: #94A3B8; margin: 0; }
-          .btn { display: inline-block; background-color: #2EB67D; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 10px; }
-        </style>
+      <head><meta charset="utf-8">
+      <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #F8FAFC;
+               color: #64748B; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #fff;
+                     border-radius: 12px; overflow: hidden;
+                     border: 1px solid #E2E8F0; }
+        .header { background: #2EB67D; padding: 30px 20px; text-align: center; }
+        .header h1 { color: #fff; margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px 30px; line-height: 1.6; }
+        .box { background: #F1F5F9; border-radius: 8px; padding: 25px;
+               margin: 25px 0; border-left: 4px solid #2EB67D; }
+        .row { margin-bottom: 12px; }
+        .lbl { font-weight: 600; color: #1E293B; font-size: 13px;
+               text-transform: uppercase; letter-spacing: 0.025em; }
+        .val { color: #334155; font-size: 16px; }
+        .footer { background: #F8FAFC; padding: 20px; text-align: center;
+                  border-top: 1px solid #E2E8F0; }
+        .footer p { font-size: 13px; color: #94A3B8; margin: 0; }
+      </style>
       </head>
       <body>
         <div class="container">
-          <div class="header">
-            <h1>MindCare Connect</h1>
-          </div>
+          <div class="header"><h1>MindCare Connect</h1></div>
           <div class="content">
-            <h2 style="color: #1E293B; margin-top: 0;">${titleText}</h2>
+            <h2 style="color:#1E293B;margin-top:0;">${titleText}</h2>
             <p>${bodyText}</p>
-            
-            <div class="appointment-box">
-              <div class="info-row">
-                <span class="info-label">Patient:</span>
-                <span class="info-value">${data.patientName}</span>
+            <div class="box">
+              <div class="row">
+                <div class="lbl">Patient</div>
+                <div class="val">${data.patientName}</div>
               </div>
-              <div class="info-row">
-                <span class="info-label">Title:</span>
-                <span class="info-value">${data.appointmentTitle}</span>
+              <div class="row">
+                <div class="lbl">Title</div>
+                <div class="val">${data.appointmentTitle}</div>
               </div>
-              <div class="info-row">
-                <span class="info-label">Time:</span>
-                <span class="info-value">${data.appointmentTime}</span>
+              <div class="row">
+                <div class="lbl">Time</div>
+                <div class="val">${data.appointmentTime}</div>
               </div>
             </div>
-            
-            <p>Please ensure that all necessary preparations are made for this appointment.</p>
+            <p>Please ensure all necessary preparations are made for this appointment.</p>
           </div>
           <div class="footer">
             <p>&copy; 2026 MindCare Connect. All rights reserved.</p>
-            <p>This is an automated message, please do not reply.</p>
+            <p>This is an automated message — please do not reply.</p>
           </div>
         </div>
       </body>

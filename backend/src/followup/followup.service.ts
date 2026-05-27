@@ -8,13 +8,25 @@ export class FollowupService {
   constructor(private prisma: PrismaService) {}
 
   async create(createFollowupDto: CreateFollowupDto) {
-    const { patientId, ...payload } = createFollowupDto;
+    const { patientId, createdById, mentalStatus, ...payload } = createFollowupDto;
+    
+    // Update patient status based on followup mentalStatus
+    await this.prisma.patient.update({
+      where: { id: patientId },
+      data: { status: mentalStatus }
+    });
+
     return this.prisma.followup.create({
       data: {
         patient: { connect: { id: patientId } },
+        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
+        mentalStatus,
         ...payload,
       },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        createdBy: true
+      },
     });
   }
 
@@ -22,17 +34,24 @@ export class FollowupService {
     return this.prisma.followup.findMany({
       where: { patientId },
       orderBy: { createdAt: 'desc' },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        createdBy: true
+      },
     });
   }
 
-  async findAllGlobal(mhpId?: number, search?: string, startDate?: Date, endDate?: Date) {
+  async findAllGlobal(mhpId?: number, search?: string, startDate?: Date, endDate?: Date, chwId?: number) {
     const where: any = {};
 
     if (mhpId) {
       where.patient = {
         registeredByMhpId: mhpId,
       };
+    }
+
+    if (chwId) {
+      where.createdById = chwId;
     }
 
     if (search) {
@@ -51,7 +70,10 @@ export class FollowupService {
     return this.prisma.followup.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        createdBy: true
+      },
     });
   }
 

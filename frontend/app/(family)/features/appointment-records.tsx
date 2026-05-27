@@ -7,10 +7,12 @@ import { colors, spacing, typography, shadows, borderRadius } from '@/constants/
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function AppointmentRecords() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const { data: patients } = useQuery({
     queryKey: ['familyPatients', user?.id],
@@ -27,23 +29,23 @@ export default function AppointmentRecords() {
   });
 
   return (
-    <Container safeArea edges={[ 'top', 'bottom' ]} style={styles.container}>
+    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
       <View style={styles.headbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Appointment Records</Text>
-        <Text style={styles.subtitle}>Scheduled appointments and reminders for your patient</Text>
+        <Text style={styles.title}>{t('appointment_records.title')}</Text>
+        <Text style={styles.subtitle}>{t('appointment_records.subtitle')}</Text>
 
         {isLoading ? (
-          <Text style={styles.infoText}>Loading appointments...</Text>
+          <Text style={styles.infoText}>{t('appointment_records.loading')}</Text>
         ) : !reminders || reminders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
-            <Text style={styles.emptyText}>No appointments found</Text>
+            <Text style={styles.emptyText}>{t('appointment_records.no_appointments')}</Text>
           </View>
         ) : (
           reminders.map((item: any) => (
@@ -53,6 +55,7 @@ export default function AppointmentRecords() {
                   <Ionicons name={item.type === 'Medication' ? 'medical' : 'calendar'} size={20} color={colors.primary} />
                 </View>
                 <View style={styles.headerText}>
+                  {/* Appointment title is user-entered data — display as-is */}
                   <Text style={styles.cardTitle}>{item.title}</Text>
                   <Text style={styles.cardTime}>{item.time}</Text>
                 </View>
@@ -62,22 +65,21 @@ export default function AppointmentRecords() {
                   </View>
                 )}
               </View>
-              
               <View style={styles.cardFooter}>
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoLabel}>{t('appointment_records.location_label')}</Text>
                   <Text style={styles.infoValue}>{patient?.province}, {patient?.district}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Ionicons name="business-outline" size={14} color={colors.textTertiary} />
-                  <Text style={styles.infoLabel}>Health Center:</Text>
-                  <Text style={styles.infoValue}>{patient?.registeredByMhp?.workplace || 'N/A'}</Text>
+                  <Text style={styles.infoLabel}>{t('appointment_records.health_center')}:</Text>
+                  <Text style={styles.infoValue}>{patient?.registeredByMhp?.workplace || t('common.na')}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={14} color={colors.textTertiary} />
-                  <Text style={styles.infoLabel}>MHP:</Text>
-                  <Text style={styles.infoValue}>{patient?.registeredByMhp?.fullName || 'N/A'}</Text>
+                  <Text style={styles.infoLabel}>{t('appointment_records.mhp_label')}:</Text>
+                  <Text style={styles.infoValue}>{patient?.registeredByMhp?.fullName || t('common.na')}</Text>
                 </View>
               </View>
             </Card>
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
   completedBadge: { marginLeft: spacing.sm },
   cardFooter: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, gap: 4 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  infoLabel: { ...typography.tinyBold, color: colors.textSecondary, width: 80 },
+  infoLabel: { ...typography.tinyBold, color: colors.textSecondary, width: 90 },
   infoValue: { ...typography.tiny, color: colors.text, flex: 1 },
   infoText: { textAlign: 'center', ...typography.body, color: colors.textTertiary, marginTop: spacing.xl },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: spacing.xxl, gap: spacing.md },

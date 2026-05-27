@@ -18,12 +18,18 @@ export class ReminderController {
   @UseGuards(JwtAuthGuard)
   async create(@Body() createReminderDto: CreateReminderDto, @Req() req) {
     const reminder = await this.reminderService.create(createReminderDto);
-    
+    const meta = JSON.stringify({
+      patientName: reminder.patient.fullName,
+      reminderTitle: reminder.title,
+      reminderTime: reminder.time,
+    });
+
     // Notify creator
     await this.notificationService.create({
       type: 'reminder_created',
       title: 'Reminder Set',
       message: `Reminder for patient ${reminder.patient.fullName} has been set.`,
+      metadata: meta,
       userId: req.user.id,
     });
 
@@ -33,6 +39,7 @@ export class ReminderController {
         type: 'reminder_created',
         title: 'New Patient Reminder',
         message: `A new reminder has been set for ${reminder.patient.fullName}.`,
+        metadata: meta,
         userId: reminder.patient.assignedChwId,
       });
     }
@@ -43,6 +50,7 @@ export class ReminderController {
         type: 'reminder_created',
         title: 'Appointment Scheduled',
         message: `A new appointment/reminder has been set for ${reminder.patient.fullName}.`,
+        metadata: meta,
         userId: reminder.patient.assignedFamilyId,
       });
     }
@@ -59,7 +67,6 @@ export class ReminderController {
     let effectiveFamilyId: number | undefined = undefined;
     let pid = patientId ? +patientId : undefined;
 
-    // If MHP is logged in, filter to their own data
     if (currentUserId) {
       const currentUser = await this.prisma.user.findUnique({
         where: { id: currentUserId },

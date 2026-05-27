@@ -46,6 +46,11 @@ export class ReminderService {
           type: 'APPOINTMENT_SCHEDULED',
           title: 'New Appointment Scheduled',
           message: `A new appointment "${reminder.title}" has been scheduled for ${reminder.patient.fullName} on ${reminder.time}.`,
+          metadata: JSON.stringify({
+            patientName: reminder.patient.fullName,
+            appointmentTitle: reminder.title,
+            appointmentTime: reminder.time,
+          }),
           userId: recipient.id,
         });
 
@@ -105,6 +110,11 @@ export class ReminderService {
             type: 'APPOINTMENT_REMINDER',
             title: 'Appointment Reminder: 24h Remaining',
             message: `Reminder: The appointment "${reminder.title}" for ${reminder.patient.fullName} is tomorrow at ${reminder.time}.`,
+            metadata: JSON.stringify({
+              patientName: reminder.patient.fullName,
+              appointmentTitle: reminder.title,
+              appointmentTime: reminder.time,
+            }),
             userId: recipient.id,
           });
 

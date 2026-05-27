@@ -103,6 +103,7 @@ model Notification {
   type      String
   title     String
   message   String
+  metadata  String?  // JSON string with structured data for i18n (e.g. patientName, appointmentTitle)
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
   isRead    Boolean  @default(false)
@@ -116,6 +117,7 @@ model Reminder {
   type      String
   title     String
   time      String
+  status    String   @default("PENDING") // PENDING, ATTENDED, MISSED
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
 }

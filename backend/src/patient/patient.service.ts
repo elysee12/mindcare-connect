@@ -37,6 +37,7 @@ export class PatientService {
           type: 'ASSIGNMENT',
           title: 'New Patient Assigned',
           message: `Patient ${patient.fullName} has been assigned to you.`,
+          metadata: JSON.stringify({ patientName: patient.fullName }),
           userId: patient.assignedChwId,
         },
       });
@@ -55,6 +56,7 @@ export class PatientService {
           type: 'ASSIGNMENT',
           title: 'Patient Assigned',
           message: `Patient ${patient.fullName} has been assigned to you.`,
+          metadata: JSON.stringify({ patientName: patient.fullName }),
           userId: patient.assignedFamilyId,
         },
       });
@@ -143,6 +145,7 @@ export class PatientService {
           type: 'TRACKING',
           title: 'Patient Being Tracked',
           message: `Patient ${patient.fullName} is now being tracked.`,
+          metadata: JSON.stringify({ patientName: patient.fullName }),
           userId: patient.assignedFamilyId,
         },
       });
@@ -179,9 +182,12 @@ export class PatientService {
           type: 'PATIENT_FOUND',
           title: 'Missing Patient Found',
           message: `${patient.fullName} has been located at ${location} by ${patient.foundByUser?.fullName}.`,
+          metadata: JSON.stringify({
+            patientName: patient.fullName,
+            location,
+            finderName: patient.foundByUser?.fullName,
+          }),
           userId: patient.assignedChwId,
-          // Store extra metadata as JSON in the database if the schema supports it, 
-          // or we can just fetch the patient data when viewing the notification.
         },
       });
     }
@@ -239,6 +245,7 @@ export class PatientService {
           type: 'ASSIGNMENT',
           title: 'New Patient Assigned',
           message: `Patient ${patient.fullName} has been assigned to you.`,
+          metadata: JSON.stringify({ patientName: patient.fullName }),
           userId: patient.assignedChwId,
         },
       });
@@ -258,6 +265,7 @@ export class PatientService {
           type: 'ASSIGNMENT',
           title: 'Patient Assigned',
           message: `Patient ${patient.fullName} has been assigned to you.`,
+          metadata: JSON.stringify({ patientName: patient.fullName }),
           userId: patient.assignedFamilyId,
         },
       });

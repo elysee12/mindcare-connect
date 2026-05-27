@@ -99,7 +99,7 @@ export default function ViewTrackedPatients() {
               {['province', 'district', 'sector', 'cell', 'village']
                 .map((field) => patient[field])
                 .filter(Boolean)
-                .join(', ') || 'Address not available'}
+                .join(', ') || t('notifications.address_not_available')}
             </Text>
             <View style={styles.assignmentInfo}>
               <View style={styles.assignmentItem}>
@@ -108,7 +108,7 @@ export default function ViewTrackedPatients() {
               </View>
               <View style={styles.assignmentItem}>
                 <Ionicons name="walk-outline" size={14} color={colors.success} />
-                <Text style={styles.assignmentText}>CHW: {patient.assignedChw?.fullName || 'Unassigned'}</Text>
+                <Text style={styles.assignmentText}>CHW: {patient.assignedChw?.fullName || t('patient_detail.unassigned')}</Text>
               </View>
             </View>
             <Button

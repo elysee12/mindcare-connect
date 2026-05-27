@@ -15,11 +15,16 @@ export class FollowupController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Param('patientId') patientId: string, @Body() createFollowupDto: CreateFollowupDto, @Req() req) {
-    const followup = await this.followupService.create({ ...createFollowupDto, patientId: +patientId });
+    const followup = await this.followupService.create({ 
+      ...createFollowupDto, 
+      patientId: +patientId,
+      createdById: req.user.id 
+    });
     await this.notificationService.create({
       type: 'followup_created',
       title: 'Followup Added',
       message: `Followup for patient ${followup.patient.fullName} has been added.`,
+      metadata: JSON.stringify({ patientName: followup.patient.fullName }),
       userId: req.user.id,
     });
     return followup;

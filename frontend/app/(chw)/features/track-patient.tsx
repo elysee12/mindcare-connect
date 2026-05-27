@@ -7,9 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatPatientId } from '@/lib/format';
+import { useTranslation } from 'react-i18next';
 
 export default function TrackPatient() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const queryClient = useQueryClient();
@@ -84,7 +86,7 @@ export default function TrackPatient() {
                   )}
                 </View>
                 <Text style={styles.patientAddress}>
-                  {['province', 'district', 'sector', 'cell', 'village'].map((k) => patient[k]).filter(Boolean).join(', ') || 'Address not available'}
+                  {['province', 'district', 'sector', 'cell', 'village'].map((k) => patient[k]).filter(Boolean).join(', ') || t('notifications.address_not_available')}
                 </Text>
                 <Button
                   variant={patient.tracked ? 'secondary' : 'primary'}

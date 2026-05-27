@@ -37,7 +37,7 @@ export default function ProfileScreen() {
   };
 
   const currentRole = (myUser.role || 'admin').toString().toLowerCase();
-  const displayRole = currentRole ? currentRole.toUpperCase() : '';
+  const displayRole = t(`status_values.${currentRole.toUpperCase()}`, { defaultValue: currentRole.toUpperCase() });
   const displayArea = myUser.catchment_area || myUser.workplace || '';
 
   return (
@@ -89,7 +89,7 @@ export default function ProfileScreen() {
         </Button>
 
         <View style={styles.footer}>
-          <Text style={styles.versionText}>MindCare Connect v1.0.0</Text>
+          <Text style={styles.versionText}>{t('common.version')}</Text>
         </View>
       </ScrollView>
     </Container>

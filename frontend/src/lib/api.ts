@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // Backend URL using Local IPv4
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://172.18.240.24:3000') + '/api';
+const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'http://10.15.43.24:3000') + '/api';
 
 let authUserId: string | null = null;
 
@@ -97,7 +97,7 @@ export const api = {
   submitReport: (payload: any) => request('/reports', { method: 'POST', body: JSON.stringify(payload) }),
   updateReport: (id: number, payload: any) => request(`/reports/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteReport: (id: number) => request(`/reports/${id}`, { method: 'DELETE' }),
-  reports: (params?: { search?: string; startDate?: string; endDate?: string; chwId?: string }) => {
+  reports: (params?: { search?: string; startDate?: string; endDate?: string; chwId?: string; mhpId?: string; timeframe?: string }) => {
     let query = '';
     const parts = [];
     if (params) {
@@ -105,6 +105,8 @@ export const api = {
       if (params.startDate) parts.push(`startDate=${params.startDate}`);
       if (params.endDate) parts.push(`endDate=${params.endDate}`);
       if (params.chwId) parts.push(`chwId=${params.chwId}`);
+      if (params.mhpId) parts.push(`mhpId=${params.mhpId}`);
+      if (params.timeframe) parts.push(`timeframe=${params.timeframe}`);
     }
     if (parts.length > 0) query = `?${parts.join('&')}`;
     return request(`/reports${query}`);

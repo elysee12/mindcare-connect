@@ -6,42 +6,47 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 export default function AssignRoles() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [status, setStatus] = useState('');
-  const { data: users = [], isLoading } = useQuery({
+
+  const { data: users = [] } = useQuery({
     queryKey: ['usersForRoles'],
     queryFn: () => api.users(),
   });
 
   const assign = () => {
-    setStatus('Roles assigned successfully');
+    setStatus(t('assign_roles.assigned'));
     setTimeout(() => setStatus(''), 900);
   };
 
   return (
-    <Container safeArea edges={[ 'top', 'bottom' ]} style={styles.container}>
+    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
       <View style={styles.headbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Assign Roles</Text>
-        <Text style={styles.subtitle}>Change roles for your team</Text>
+        <Text style={styles.title}>{t('assign_roles.title')}</Text>
+        <Text style={styles.subtitle}>{t('assign_roles.subtitle')}</Text>
 
-        {users.map((user) => (
+        {users.map((user: any) => (
           <Card key={user.id} style={styles.card} variant="elevated">
-            <Text style={styles.cardTitle}>{user.name}</Text>
-            <Text style={styles.cardSubtitle}>{user.role}</Text>
+            <Text style={styles.cardTitle}>{user.fullName || user.name}</Text>
+            <Text style={styles.cardSubtitle}>
+              {t(`status_values.${user.role}`, { defaultValue: user.role })}
+            </Text>
           </Card>
         ))}
 
         <View style={styles.buttonWrapper}>
           <Button variant="primary" fullWidth onPress={assign}>
-            Apply Assignments
+            {t('assign_roles.apply_btn')}
           </Button>
         </View>
 
@@ -62,7 +67,6 @@ const styles = StyleSheet.create({
   card: { padding: spacing.md, borderRadius: borderRadius.xl, ...shadows.sm },
   cardTitle: { ...typography.bodyBold, color: colors.text },
   cardSubtitle: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
-  button: { marginTop: spacing.md },
   buttonWrapper: { marginTop: spacing.md },
   toast: { marginTop: spacing.sm, ...typography.captionBold, color: colors.success },
 });

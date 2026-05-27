@@ -6,23 +6,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { api } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 export default function ReportsScreen() {
   const { role } = useLocalSearchParams<{ role: string }>();
+  const { t } = useTranslation();
   const [timeframe, setTimeframe] = useState('Month');
 
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData } = useQuery({
     queryKey: ['reports', timeframe],
     queryFn: () => api.reports(timeframe),
     staleTime: 1000 * 30,
   });
 
   const stats = [
-    { label: 'Follow-ups', value: reportData?.total ?? 0, color: colors.primary },
-    { label: 'Missed', value: reportData?.missed ?? 0, color: colors.error },
-    { label: 'Relapses', value: reportData?.relapses ?? 0, color: colors.warning },
+    { label: t('reports.follow_ups'), value: reportData?.total ?? 0, color: colors.primary },
+    { label: t('reports.missed'), value: reportData?.missed ?? 0, color: colors.error },
+    { label: t('reports.relapses'), value: reportData?.relapses ?? 0, color: colors.warning },
   ];
 
   const chartData = [
@@ -39,7 +41,7 @@ export default function ReportsScreen() {
     <Container safeArea edges={['top']} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>System Reports</Text>
+          <Text style={styles.title}>{t('reports.title')}</Text>
           <TouchableOpacity style={styles.filterBtn}>
             <Ionicons name="filter" size={20} color={colors.primary} />
             <Text style={styles.filterText}>{timeframe}</Text>
@@ -55,10 +57,10 @@ export default function ReportsScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Appointment Compliance</Text>
+        <Text style={styles.sectionTitle}>{t('reports.appointment_compliance')}</Text>
         <Card variant="elevated" style={styles.chartCard}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Weekly Success Rate</Text>
+            <Text style={styles.chartTitle}>{t('reports.weekly_success')}</Text>
             <Text style={styles.chartSubtitle}>Avg. 68% this week</Text>
           </View>
           <View style={styles.barChart}>
@@ -73,19 +75,19 @@ export default function ReportsScreen() {
           </View>
         </Card>
 
-        <Text style={styles.sectionTitle}>Relapse Risk Distribution</Text>
+        <Text style={styles.sectionTitle}>{t('reports.relapse_distribution')}</Text>
         <Card variant="elevated" style={styles.chartCard}>
           <View style={styles.pieSimulation}>
             <View style={styles.pieStats}>
-              <PieLegendItem label="Stable" color={colors.success} value="75%" />
-              <PieLegendItem label="At Risk" color={colors.warning} value="15%" />
-              <PieLegendItem label="Relapsed" color={colors.error} value="10%" />
+              <PieLegendItem label={t('reports.stable')} color={colors.success} value="75%" />
+              <PieLegendItem label={t('reports.at_risk')} color={colors.warning} value="15%" />
+              <PieLegendItem label={t('reports.relapsed')} color={colors.error} value="10%" />
             </View>
             <View style={styles.pieCircle}>
               <View style={[styles.pieInner, { borderColor: colors.success, borderTopColor: colors.error, borderRightColor: colors.warning }]} />
               <View style={styles.pieCenter}>
                 <Text style={styles.pieCenterValue}>120</Text>
-                <Text style={styles.pieCenterLabel}>Total</Text>
+                <Text style={styles.pieCenterLabel}>{t('reports.total')}</Text>
               </View>
             </View>
           </View>
@@ -98,7 +100,7 @@ export default function ReportsScreen() {
           onPress={() => {}}
           style={styles.downloadBtn}
         >
-          Export PDF Report
+          {t('reports.export_pdf')}
         </Button>
       </ScrollView>
     </Container>

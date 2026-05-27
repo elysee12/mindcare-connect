@@ -151,7 +151,7 @@ export default function LoginScreen() {
         </Card>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Need help? Contact Admin</Text>
+          <Text style={styles.footerText}>{t('auth.need_help')}</Text>
         </View>
       </ScrollView>
       </KeyboardAvoidingView>

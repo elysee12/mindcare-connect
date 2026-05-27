@@ -7,19 +7,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 type TabType = 'profile' | 'privacy' | 'notifications' | 'help';
 
 export default function AccountSettings() {
   const router = useRouter();
   const { user, setUser } = useAuth();
+  const { t } = useTranslation();
   const { role = 'chw', tab: initialTab = 'profile' } = useLocalSearchParams<{ role?: string; tab?: TabType }>();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab as TabType);
   const [savedMessage, setSavedMessage] = useState('');
 
-  // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -27,29 +28,17 @@ export default function AccountSettings() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const [profileValues, setProfileValues] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    workplace: '',
-    province: '',
-    district: '',
-    sector: '',
-    cell: '',
-    village: '',
-    password: '',
-    confirmPassword: '',
+    fullName: '', email: '', phone: '', workplace: '',
+    province: '', district: '', sector: '', cell: '', village: '',
+    password: '', confirmPassword: '',
   });
 
   const [passwordValues, setPasswordValues] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: '', newPassword: '', confirmPassword: '',
   });
 
   const [notificationValues, setNotificationValues] = useState({
-    reminders: true,
-    updates: true,
-    offers: false,
+    reminders: true, updates: true, offers: false,
   });
 
   const { data: userProfile } = useQuery({
@@ -59,7 +48,6 @@ export default function AccountSettings() {
     staleTime: 1000 * 60,
   });
 
-  // Load user data when component mounts or when the backend profile changes
   useEffect(() => {
     const source = userProfile || user;
     if (source) {
@@ -82,31 +70,25 @@ export default function AccountSettings() {
   const allowedRole = ['chw', 'mhp', 'family', 'admin'];
   const routeRole = allowedRole.includes(role?.toLowerCase?.() || '') ? role.toLowerCase() : undefined;
   const currentRole = (userProfile?.role || user?.role || routeRole || 'chw').toString().toLowerCase();
-  const roleLabel = currentRole.toUpperCase();
+  const roleLabel = t(`status_values.${currentRole.toUpperCase()}`, { defaultValue: currentRole.toUpperCase() });
 
   const tabTitle = useMemo(() => {
     switch (activeTab) {
-      case 'privacy':
-        return 'Privacy & Security';
-      case 'notifications':
-        return 'Push Notifications';
-      case 'help':
-        return 'Help & Support';
-      default:
-        return 'Edit Profile';
+      case 'privacy': return t('profile.privacy_security');
+      case 'notifications': return t('profile.push_notifications');
+      case 'help': return t('profile.help_support');
+      default: return t('profile.edit_profile');
     }
-  }, [activeTab]);
+  }, [activeTab, t]);
 
   const selectTab = (tabSelection: TabType) => {
     setActiveTab(tabSelection);
     setSavedMessage('');
   };
 
-  // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: (data: any) => api.updateUser(user?.id || '', data),
     onSuccess: (updatedUser) => {
-      // Update local user state and refresh profile cache
       if (user) {
         setUser({
           ...user,
@@ -124,68 +106,55 @@ export default function AccountSettings() {
         });
       }
       queryClient.invalidateQueries(['userProfile', user?.id]);
-      setProfileValues((prev) => ({
-        ...prev,
-        password: '',
-        confirmPassword: '',
-      }));
-      setSavedMessage('Profile updated successfully');
+      setProfileValues((prev) => ({ ...prev, password: '', confirmPassword: '' }));
+      setSavedMessage(t('account_settings.profile_updated'));
       setTimeout(() => setSavedMessage(''), 3000);
     },
     onError: (error: any) => {
-      Alert.alert('Error', `Failed to update profile: ${error.message || 'Unknown error'}`);
+      Alert.alert(t('common.error'), `${t('account_settings.profile_updated').replace('updated', 'update failed')}: ${error.message || ''}`);
     },
   });
 
-  // Password update mutation
   const updatePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      // First verify current password
       await api.login(user?.email || '', data.currentPassword);
-      // If successful, update password
       return api.updateUser(user?.id || '', { password: data.newPassword });
     },
     onSuccess: () => {
-      setPasswordValues({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-      setSavedMessage('Password updated successfully');
+      setPasswordValues({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setSavedMessage(t('account_settings.password_updated'));
       setTimeout(() => setSavedMessage(''), 3000);
     },
     onError: (error: any) => {
-      Alert.alert('Error', `Failed to update password: ${error.message || 'Unknown error'}`);
+      Alert.alert(t('common.error'), error.message || '');
     },
   });
 
   const saveSettings = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'User not found. Please log in again.');
+      Alert.alert(t('common.error'), t('account_settings.user_not_found'));
       return;
     }
 
     if (activeTab === 'profile') {
-      // Validate profile data
       if (!profileValues.fullName.trim()) {
-        Alert.alert('Error', 'Full name is required');
+        Alert.alert(t('common.error'), t('account_settings.name_required'));
         return;
       }
       if (!profileValues.email.trim()) {
-        Alert.alert('Error', 'Email is required');
+        Alert.alert(t('common.error'), t('account_settings.email_required'));
         return;
       }
       if (profileValues.password || profileValues.confirmPassword) {
         if (profileValues.password.length < 8) {
-          Alert.alert('Error', 'Password must be at least 8 characters long');
+          Alert.alert(t('common.error'), t('account_settings.password_min'));
           return;
         }
         if (profileValues.password !== profileValues.confirmPassword) {
-          Alert.alert('Error', 'Password and confirmation do not match');
+          Alert.alert(t('common.error'), t('account_settings.password_mismatch'));
           return;
         }
       }
-
       const payload: any = {
         fullName: profileValues.fullName.trim(),
         email: profileValues.email.trim(),
@@ -197,38 +166,31 @@ export default function AccountSettings() {
         cell: profileValues.cell.trim() || undefined,
         village: profileValues.village.trim() || undefined,
       };
-
-      if (profileValues.password) {
-        payload.password = profileValues.password;
-      }
-
+      if (profileValues.password) payload.password = profileValues.password;
       updateProfileMutation.mutate(payload);
     } else if (activeTab === 'privacy') {
-      // Validate password data
       if (!passwordValues.currentPassword) {
-        Alert.alert('Error', 'Current password is required');
+        Alert.alert(t('common.error'), t('account_settings.current_password_required'));
         return;
       }
       if (!passwordValues.newPassword) {
-        Alert.alert('Error', 'New password is required');
+        Alert.alert(t('common.error'), t('account_settings.new_password_required'));
         return;
       }
       if (passwordValues.newPassword.length < 8) {
-        Alert.alert('Error', 'New password must be at least 8 characters long');
+        Alert.alert(t('common.error'), t('account_settings.password_min'));
         return;
       }
       if (passwordValues.newPassword !== passwordValues.confirmPassword) {
-        Alert.alert('Error', 'New password and confirmation do not match');
+        Alert.alert(t('common.error'), t('account_settings.password_mismatch'));
         return;
       }
-
       updatePasswordMutation.mutate({
         currentPassword: passwordValues.currentPassword,
         newPassword: passwordValues.newPassword,
       });
     } else {
-      // For notifications and help tabs, just show success message
-      setSavedMessage(`${tabTitle} settings saved successfully`);
+      setSavedMessage(`${tabTitle} ${t('account_settings.settings_saved')}`);
       setTimeout(() => setSavedMessage(''), 3000);
     }
   };
@@ -237,56 +199,44 @@ export default function AccountSettings() {
     if (activeTab === 'privacy') {
       return (
         <View>
-          <Text style={styles.sectionTitle}>Change Password</Text>
+          <Text style={styles.sectionTitle}>{t('account_settings.change_password')}</Text>
           <View style={styles.fieldSpacing}>
-            <Text style={styles.inputLabel}>Current Password</Text>
+            <Text style={styles.inputLabel}>{t('account_settings.current_password')}</Text>
             <Input
               value={passwordValues.currentPassword}
-              onChangeText={(value) => setPasswordValues((prev) => ({ ...prev, currentPassword: value }))}
+              onChangeText={(v) => setPasswordValues((p) => ({ ...p, currentPassword: v }))}
               secureTextEntry={!showCurrentPassword}
               rightIcon={
                 <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
-                  <Ionicons 
-                    name={showCurrentPassword ? "eye-off-outline" : "eye-outline"} 
-                    size={20} 
-                    color={colors.textTertiary} 
-                  />
+                  <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
               }
               clearable
             />
           </View>
           <View style={styles.fieldSpacing}>
-            <Text style={styles.inputLabel}>New Password</Text>
+            <Text style={styles.inputLabel}>{t('account_settings.new_password')}</Text>
             <Input
               value={passwordValues.newPassword}
-              onChangeText={(value) => setPasswordValues((prev) => ({ ...prev, newPassword: value }))}
+              onChangeText={(v) => setPasswordValues((p) => ({ ...p, newPassword: v }))}
               secureTextEntry={!showNewPassword}
               rightIcon={
                 <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                  <Ionicons 
-                    name={showNewPassword ? "eye-off-outline" : "eye-outline"} 
-                    size={20} 
-                    color={colors.textTertiary} 
-                  />
+                  <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
               }
               clearable
             />
           </View>
           <View style={styles.fieldSpacing}>
-            <Text style={styles.inputLabel}>Confirm New Password</Text>
+            <Text style={styles.inputLabel}>{t('account_settings.confirm_new_password')}</Text>
             <Input
               value={passwordValues.confirmPassword}
-              onChangeText={(value) => setPasswordValues((prev) => ({ ...prev, confirmPassword: value }))}
+              onChangeText={(v) => setPasswordValues((p) => ({ ...p, confirmPassword: v }))}
               secureTextEntry={!showConfirmNewPassword}
               rightIcon={
                 <TouchableOpacity onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}>
-                  <Ionicons 
-                    name={showConfirmNewPassword ? "eye-off-outline" : "eye-outline"} 
-                    size={20} 
-                    color={colors.textTertiary} 
-                  />
+                  <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
               }
               clearable
@@ -297,26 +247,22 @@ export default function AccountSettings() {
     }
 
     if (activeTab === 'notifications') {
-      const renderNotificationToggle = (label: string, key: keyof typeof notificationValues) => (
+      const renderToggle = (labelKey: string, key: keyof typeof notificationValues) => (
         <View key={key} style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{label}</Text>
+          <Text style={styles.toggleLabel}>{t(`account_settings.${labelKey}`)}</Text>
           <TouchableOpacity
-            style={[
-              styles.toggleSwitch,
-              notificationValues[key] ? styles.toggleOn : styles.toggleOff,
-            ]}
-            onPress={() => setNotificationValues((prev) => ({ ...prev, [key]: !prev[key] }))}
+            style={[styles.toggleSwitch, notificationValues[key] ? styles.toggleOn : styles.toggleOff]}
+            onPress={() => setNotificationValues((p) => ({ ...p, [key]: !p[key] }))}
           >
-            <Text style={styles.toggleText}>{notificationValues[key] ? 'On' : 'Off'}</Text>
+            <Text style={styles.toggleText}>{notificationValues[key] ? t('account_settings.on') : t('account_settings.off')}</Text>
           </TouchableOpacity>
         </View>
       );
-
       return (
         <View>
-          {renderNotificationToggle('Reminders', 'reminders')}
-          {renderNotificationToggle('Appointment Updates', 'updates')}
-          {renderNotificationToggle('Offers & News', 'offers')}
+          {renderToggle('reminders', 'reminders')}
+          {renderToggle('appointment_updates', 'updates')}
+          {renderToggle('offers_news', 'offers')}
         </View>
       );
     }
@@ -324,11 +270,8 @@ export default function AccountSettings() {
     if (activeTab === 'help') {
       return (
         <View>
-          <Text style={styles.bodyText}>
-            For help and support, contact support@mindcare.com or visit our documentation at
-            https://mindcare-connect.example.com/docs.
-          </Text>
-          <Text style={styles.bodyText}>You can also call +1 800 123 456.</Text>
+          <Text style={styles.bodyText}>{t('account_settings.help_text')}</Text>
+          <Text style={styles.bodyText}>{t('account_settings.help_phone')}</Text>
         </View>
       );
     }
@@ -336,65 +279,43 @@ export default function AccountSettings() {
     // profile tab
     return (
       <View>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
+        <Text style={styles.sectionTitle}>{t('account_settings.personal_info')}</Text>
         <View style={styles.fieldSpacing}>
-          <Text style={styles.inputLabel}>Full Name</Text>
-          <Input
-            value={profileValues.fullName}
-            onChangeText={(value) => setProfileValues((prev) => ({ ...prev, fullName: value }))}
-            clearable
-          />
+          <Text style={styles.inputLabel}>{t('account_settings.full_name')}</Text>
+          <Input value={profileValues.fullName} onChangeText={(v) => setProfileValues((p) => ({ ...p, fullName: v }))} clearable />
         </View>
         <View style={styles.fieldSpacing}>
-          <Text style={styles.inputLabel}>Email</Text>
-          <Input
-            value={profileValues.email}
-            onChangeText={(value) => setProfileValues((prev) => ({ ...prev, email: value }))}
-            keyboardType="email-address"
-            clearable
-          />
+          <Text style={styles.inputLabel}>{t('account_settings.email')}</Text>
+          <Input value={profileValues.email} onChangeText={(v) => setProfileValues((p) => ({ ...p, email: v }))} keyboardType="email-address" clearable />
         </View>
         <View style={styles.fieldSpacing}>
-          <Text style={styles.inputLabel}>Phone</Text>
-          <Input
-            value={profileValues.phone}
-            onChangeText={(value) => setProfileValues((prev) => ({ ...prev, phone: value }))}
-            keyboardType="phone-pad"
-            clearable
-          />
+          <Text style={styles.inputLabel}>{t('account_settings.phone')}</Text>
+          <Input value={profileValues.phone} onChangeText={(v) => setProfileValues((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" clearable />
         </View>
-        <Text style={styles.sectionTitle}>Security</Text>
+        <Text style={styles.sectionTitle}>{t('account_settings.security')}</Text>
         <View style={styles.fieldSpacing}>
-          <Text style={styles.inputLabel}>Password</Text>
+          <Text style={styles.inputLabel}>{t('account_settings.password')}</Text>
           <Input
             value={profileValues.password}
-            onChangeText={(value) => setProfileValues((prev) => ({ ...prev, password: value }))}
+            onChangeText={(v) => setProfileValues((p) => ({ ...p, password: v }))}
             secureTextEntry={!showPassword}
             rightIcon={
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons 
-                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                  size={20} 
-                  color={colors.textTertiary} 
-                />
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
               </TouchableOpacity>
             }
             clearable
           />
         </View>
         <View style={styles.fieldSpacing}>
-          <Text style={styles.inputLabel}>Confirm Password</Text>
+          <Text style={styles.inputLabel}>{t('account_settings.confirm_password')}</Text>
           <Input
             value={profileValues.confirmPassword}
-            onChangeText={(value) => setProfileValues((prev) => ({ ...prev, confirmPassword: value }))}
+            onChangeText={(v) => setProfileValues((p) => ({ ...p, confirmPassword: v }))}
             secureTextEntry={!showConfirmPassword}
             rightIcon={
               <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                <Ionicons 
-                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                  size={20} 
-                  color={colors.textTertiary} 
-                />
+                <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
               </TouchableOpacity>
             }
             clearable
@@ -403,37 +324,33 @@ export default function AccountSettings() {
 
         {(currentRole === 'mhp' || currentRole === 'admin') && (
           <>
-            <Text style={styles.sectionTitle}>Professional Information</Text>
+            <Text style={styles.sectionTitle}>{t('account_settings.professional_info')}</Text>
             <View style={styles.fieldSpacing}>
-              <Text style={styles.inputLabel}>Workplace</Text>
-              <Input
-                value={profileValues.workplace}
-                onChangeText={(value) => setProfileValues((prev) => ({ ...prev, workplace: value }))}
-                clearable
-              />
+              <Text style={styles.inputLabel}>{t('account_settings.workplace')}</Text>
+              <Input value={profileValues.workplace} onChangeText={(v) => setProfileValues((p) => ({ ...p, workplace: v }))} clearable />
             </View>
           </>
         )}
 
         {(currentRole === 'chw' || currentRole === 'family') && (
           <>
-            <Text style={styles.sectionTitle}>Location Information</Text>
+            <Text style={styles.sectionTitle}>{t('account_settings.location_info')}</Text>
             <LocationPicker
               province={profileValues.province}
               district={profileValues.district}
               sector={profileValues.sector}
               cell={profileValues.cell}
               village={profileValues.village}
-              onProvinceChange={(value) => setProfileValues((prev) => ({ ...prev, province: value }))}
-              onDistrictChange={(value) => setProfileValues((prev) => ({ ...prev, district: value }))}
-              onSectorChange={(value) => setProfileValues((prev) => ({ ...prev, sector: value }))}
-              onCellChange={(value) => setProfileValues((prev) => ({ ...prev, cell: value }))}
-              onVillageChange={(value) => setProfileValues((prev) => ({ ...prev, village: value }))}
+              onProvinceChange={(v) => setProfileValues((p) => ({ ...p, province: v }))}
+              onDistrictChange={(v) => setProfileValues((p) => ({ ...p, district: v }))}
+              onSectorChange={(v) => setProfileValues((p) => ({ ...p, sector: v }))}
+              onCellChange={(v) => setProfileValues((p) => ({ ...p, cell: v }))}
+              onVillageChange={(v) => setProfileValues((p) => ({ ...p, village: v }))}
             />
           </>
         )}
 
-        <Text style={styles.bodyText}>Role: {roleLabel}</Text>
+        <Text style={styles.bodyText}>{t('account_settings.role_label')}: {roleLabel}</Text>
       </View>
     );
   };
@@ -443,25 +360,28 @@ export default function AccountSettings() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Account Settings</Text>
+          <Text style={styles.title}>{t('account_settings.title')}</Text>
         </View>
 
-        <Text style={styles.subtitle}>{`${roleLabel} view - ${tabTitle}`}</Text>
+        <Text style={styles.subtitle}>{`${roleLabel} - ${tabTitle}`}</Text>
 
         <View style={styles.tabRow}>
           {(['profile', 'privacy', 'notifications', 'help'] as TabType[]).map((tabKey) => (
             <TouchableOpacity
               key={tabKey}
-              style={[
-                styles.tabButton,
-                activeTab === tabKey && styles.tabButtonActive,
-              ]}
+              style={[styles.tabButton, activeTab === tabKey && styles.tabButtonActive]}
               onPress={() => selectTab(tabKey)}
             >
               <Text style={[styles.tabButtonText, activeTab === tabKey && styles.tabButtonTextActive]}>
-                {tabKey === 'profile' ? 'Profile' : tabKey === 'privacy' ? 'Privacy' : tabKey === 'notifications' ? 'Notifications' : 'Help'}
+                {tabKey === 'profile'
+                  ? t('account_settings.edit_profile')
+                  : tabKey === 'privacy'
+                  ? t('account_settings.privacy')
+                  : tabKey === 'notifications'
+                  ? t('account_settings.notifications_tab')
+                  : t('account_settings.help')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -473,18 +393,18 @@ export default function AccountSettings() {
 
         {savedMessage ? <Text style={styles.successText}>{savedMessage}</Text> : null}
 
-        <Button 
-          variant="primary" 
-          size="lg" 
-          loading={updateProfileMutation.isPending || updatePasswordMutation.isPending} 
+        <Button
+          variant="primary"
+          size="lg"
+          loading={updateProfileMutation.isPending || updatePasswordMutation.isPending}
           onPress={saveSettings}
         >
-          Save {tabTitle}
+          {t('account_settings.save_btn')} {tabTitle}
         </Button>
 
         <View style={styles.backAction}>
           <Button variant="ghost" size="md" onPress={() => router.back()}>
-            Back
+            {t('common.back')}
           </Button>
         </View>
       </ScrollView>
@@ -510,7 +430,6 @@ const styles = StyleSheet.create({
   bodyText: { ...typography.body, color: colors.text, marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.primaryDark, marginBottom: spacing.md, marginTop: spacing.lg },
   inputLabel: { ...typography.body, color: colors.text, marginBottom: spacing.xs },
-  adminNote: { ...typography.captionBold, color: colors.primary },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
   toggleLabel: { ...typography.body, color: colors.text },
   toggleSwitch: { minWidth: 72, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: borderRadius.lg, alignItems: 'center' },

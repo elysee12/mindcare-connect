@@ -20,6 +20,7 @@ export class UserController {
       type: 'user_created',
       title: 'User Created',
       message: `New user ${user.fullName} (${user.role}) has been created.`,
+      metadata: JSON.stringify({ userName: user.fullName, userRole: user.role }),
       userId: req.user.id,
     });
     return user;
@@ -43,6 +44,7 @@ export class UserController {
       type: 'user_updated',
       title: 'User Updated',
       message: `User ${updatedUser.fullName} has been updated.`,
+      metadata: JSON.stringify({ userName: updatedUser.fullName }),
       userId: req.user.id,
     });
     return updatedUser;
@@ -58,6 +60,7 @@ export class UserController {
         type: 'user_deleted',
         title: 'User Deleted',
         message: `User ${user.fullName} has been deleted.`,
+        metadata: JSON.stringify({ userName: user.fullName }),
         userId: req.user.id,
       });
     }

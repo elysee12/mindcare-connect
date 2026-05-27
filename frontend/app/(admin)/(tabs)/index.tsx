@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
+import { translateNotifications, TranslatedNotification } from '@/lib/notificationTranslation';
 
 const { width } = Dimensions.get('window');
 
@@ -27,12 +28,16 @@ export default function AdminDashboard() {
     staleTime: 1000 * 30,
   });
 
-  const { data: recentAlerts, refetch: refetchNotifications } = useQuery<{ id: number; title: string; message: string; type?: string; createdAt: string }[]>({
+  const { data: rawAlerts, refetch: refetchNotifications } = useQuery<any[]>({
     queryKey: ['recentAlerts', user?.id],
     queryFn: async () => api.notifications(user?.id),
     staleTime: 1000 * 30,
     enabled: !!user?.id,
   });
+
+  const recentAlerts: TranslatedNotification[] = rawAlerts
+    ? translateNotifications(rawAlerts, t)
+    : [];
 
   const clearAllMutation = useMutation({
     mutationFn: () => api.clearAllNotifications(user?.id),
@@ -135,7 +140,7 @@ export default function AdminDashboard() {
                     <Ionicons name="notifications" size={20} color={colors.primary} />
                   </View>
                   <View style={styles.activityText}>
-                    <Text style={styles.activityTitle}>{alert.title}</Text>
+                    <Text style={styles.activityTitle}>{alert.translatedTitle}</Text>
                     <Text style={styles.activityMessage} numberOfLines={1}>{alert.message}</Text>
                   </View>
                 </View>
@@ -184,8 +189,8 @@ export default function AdminDashboard() {
                             <Ionicons name="notifications" size={20} color={colors.primary} />
                           </View>
                           <View style={styles.activityText}>
-                            <Text style={styles.activityTitle}>{alert.title}</Text>
-                            <Text style={styles.activityMessage}>{alert.message}</Text>
+                            <Text style={styles.activityTitle}>{alert.translatedTitle}</Text>
+                            <Text style={styles.activityMessage}>{alert.translatedMessage}</Text>
                           </View>
                         </View>
                       </Card>
@@ -218,7 +223,7 @@ export default function AdminDashboard() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { height: 'auto', maxHeight: '80%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Patient Located Details</Text>
+              <Text style={styles.modalTitle}>{t('notifications.patient_located_details')}</Text>
               <TouchableOpacity onPress={() => setShowDetailModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -230,9 +235,9 @@ export default function AdminDashboard() {
               <View style={styles.detailRow}>
                 <Ionicons name="time-outline" size={20} color={colors.primary} />
                 <View>
-                  <Text style={styles.detailLabel}>Time Found</Text>
+                  <Text style={styles.detailLabel}>{t('notifications.time_found')}</Text>
                   <Text style={styles.detailValue}>
-                    {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt).toLocaleString() : 'N/A'}
+                    {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt).toLocaleString() : t('common.na')}
                   </Text>
                 </View>
               </View>
@@ -240,20 +245,20 @@ export default function AdminDashboard() {
               {selectedNotification?.user && (
                 <>
                   <View style={styles.divider} />
-                  <Text style={styles.finderHeader}>Finder Contact Information</Text>
+                  <Text style={styles.finderHeader}>{t('notifications.finder_contact')}</Text>
                   
                   <View style={styles.contactRow}>
                     <Ionicons name="call-outline" size={18} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.phone || 'N/A'}</Text>
+                    <Text style={styles.contactText}>{selectedNotification.user.phone || t('common.na')}</Text>
                   </View>
                   
                   <View style={styles.contactRow}>
                     <Ionicons name="mail-outline" size={18} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.email || 'N/A'}</Text>
+                    <Text style={styles.contactText}>{selectedNotification.user.email || t('common.na')}</Text>
                   </View>
 
                   <View style={styles.divider} />
-                  <Text style={styles.finderHeader}>Finder Home Address</Text>
+                  <Text style={styles.finderHeader}>{t('notifications.finder_address')}</Text>
                   <View style={styles.addressBox}>
                     <Ionicons name="home-outline" size={18} color={colors.primary} />
                     <Text style={styles.addressText}>
@@ -263,7 +268,7 @@ export default function AdminDashboard() {
                         selectedNotification.user.sector,
                         selectedNotification.user.cell,
                         selectedNotification.user.village
-                      ].filter(Boolean).join(', ') || 'Address not available'}
+                      ].filter(Boolean).join(', ') || t('notifications.address_not_available')}
                     </Text>
                   </View>
                 </>
@@ -275,7 +280,7 @@ export default function AdminDashboard() {
                   fullWidth 
                   onPress={() => setShowDetailModal(false)}
                 >
-                  Close
+                  {t('notifications.close')}
                 </Button>
               </View>
             </View>

@@ -7,11 +7,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { api } from '@/lib/api';
 import { formatPatientId } from '@/lib/format';
+import { useTranslation } from 'react-i18next';
 
 export default function PatientDetailScreen() {
   const { id, role } = useLocalSearchParams<{ id: string, role: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [mentalStatus, setMentalStatus] = useState('Stable');
   const [notes, setNotes] = useState('');
@@ -23,13 +25,13 @@ export default function PatientDetailScreen() {
     queryFn: async () => api.patientById(id as string),
   });
 
-  const patientName = patient?.fullName || patient?.full_name || 'Unknown Patient';
+  const patientName = patient?.fullName || patient?.full_name || t('common.unknown');
   const patientIdFormatted = formatPatientId(patient?.id);
   const fullAddress = [patient?.province, patient?.district, patient?.sector, patient?.cell, patient?.village]
     .filter(Boolean)
-    .join(', ') || 'No address available';
-  const assignedChwName = patient?.assignedChw?.fullName || patient?.assignedChw?.full_name || 'Unassigned';
-  const assignedFamilyName = patient?.assignedFamily?.fullName || patient?.assignedFamily?.full_name || 'Unassigned';
+    .join(', ') || t('patient_detail.no_address');
+  const assignedChwName = patient?.assignedChw?.fullName || patient?.assignedChw?.full_name || t('patient_detail.unassigned');
+  const assignedFamilyName = patient?.assignedFamily?.fullName || patient?.assignedFamily?.full_name || t('patient_detail.unassigned');
 
   const { data: history } = useQuery({
     queryKey: ['followups', id],
@@ -60,7 +62,7 @@ export default function PatientDetailScreen() {
       setRelapseSigns(false);
       setMentalStatus('Stable');
 
-      alert('Follow-up report submitted successfully!');
+      alert(t('patient_detail.submit_report') + ' ' + t('common.success'));
     } catch (error: any) {
       alert(error.message || 'Failed to submit report');
     } finally {
@@ -84,7 +86,7 @@ export default function PatientDetailScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Patient Profile</Text>
+        <Text style={styles.title}>{t('patient_detail.title')}</Text>
         <TouchableOpacity style={styles.editBtn}>
           <Ionicons name="create-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -105,44 +107,44 @@ export default function PatientDetailScreen() {
             <Text style={styles.patientId}>{patientIdFormatted}</Text>
             <View style={styles.detailRow}>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Address</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.address')}</Text>
                 <Text style={styles.detailValue}>{fullAddress}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Assigned CHW</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.assigned_chw')}</Text>
                 <Text style={styles.detailValue}>{assignedChwName}</Text>
               </View>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Family Member</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.family_member')}</Text>
                 <Text style={styles.detailValue}>{assignedFamilyName}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Gender</Text>
-                <Text style={styles.detailValue}>{patient?.gender || 'Unknown'}</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.gender')}</Text>
+                <Text style={styles.detailValue}>{patient?.gender ? t(`status_values.${patient.gender}`, { defaultValue: patient.gender }) : t('common.unknown')}</Text>
               </View>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Age</Text>
-                <Text style={styles.detailValue}>{patient?.age ?? 'N/A'}</Text>
-              </View>
-            </View>
-            <View style={styles.detailRow}>
-              <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Contact</Text>
-                <Text style={styles.detailValue}>{patient?.contact || 'N/A'}</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.age')}</Text>
+                <Text style={styles.detailValue}>{patient?.age ?? t('common.na')}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Diagnosis</Text>
-                <Text style={styles.detailValue}>{patient?.diagnosis || 'N/A'}</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.contact')}</Text>
+                <Text style={styles.detailValue}>{patient?.contact || t('common.na')}</Text>
+              </View>
+            </View>
+            <View style={styles.detailRow}>
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>{t('patient_detail.diagnosis')}</Text>
+                <Text style={styles.detailValue}>{patient?.diagnosis || t('common.na')}</Text>
               </View>
               <View style={styles.detailBlock}>
-                <Text style={styles.detailLabel}>Status</Text>
-                <Text style={styles.detailValue}>{patient?.status || 'N/A'}</Text>
+                <Text style={styles.detailLabel}>{t('patient_detail.status')}</Text>
+                <Text style={styles.detailValue}>{patient?.status ? t(`status_values.${patient.status}`, { defaultValue: patient.status }) : t('common.na')}</Text>
               </View>
             </View>
 
@@ -150,17 +152,17 @@ export default function PatientDetailScreen() {
               <View style={styles.foundInfoContainer}>
                 <View style={styles.foundHeader}>
                   <Ionicons name="location" size={20} color={colors.success} />
-                  <Text style={styles.foundTitle}>Located Information</Text>
+                  <Text style={styles.foundTitle}>{t('patient_detail.located_info')}</Text>
                 </View>
                 <View style={styles.foundContent}>
-                  <Text style={styles.foundLabel}>Located at: <Text style={styles.foundValue}>{patient.locationFound}</Text></Text>
-                  {patient.foundDetails ? <Text style={styles.foundLabel}>Notes: <Text style={styles.foundValue}>{patient.foundDetails}</Text></Text> : null}
+                  <Text style={styles.foundLabel}>{t('patient_detail.located_at')}: <Text style={styles.foundValue}>{patient.locationFound}</Text></Text>
+                  {patient.foundDetails ? <Text style={styles.foundLabel}>{t('patient_detail.notes')}: <Text style={styles.foundValue}>{patient.foundDetails}</Text></Text> : null}
                   
                   <View style={styles.finderDetails}>
-                    <Text style={styles.finderTitle}>Finder Details:</Text>
+                    <Text style={styles.finderTitle}>{t('patient_detail.finder_details')}:</Text>
                     <View style={styles.finderRow}>
                       <Ionicons name="person" size={14} color={colors.textSecondary} />
-                      <Text style={styles.finderText}>{patient.foundByUser.fullName} ({patient.foundByUser.role})</Text>
+                      <Text style={styles.finderText}>{patient.foundByUser.fullName} ({t(`status_values.${patient.foundByUser.role}`, { defaultValue: patient.foundByUser.role })})</Text>
                     </View>
                     <View style={styles.finderRow}>
                       <Ionicons name="mail" size={14} color={colors.textSecondary} />
@@ -187,26 +189,26 @@ export default function PatientDetailScreen() {
 
         {role === 'chw' && (
           <>
-            <Text style={styles.sectionTitle}>Submit Follow-Up Report</Text>
+            <Text style={styles.sectionTitle}>{t('patient_detail.submit_followup')}</Text>
             <Card variant="elevated" style={styles.formCard}>
               <Card.Content>
-                <Text style={styles.label}>Mental Status</Text>
+                <Text style={styles.label}>{t('patient_detail.mental_status')}</Text>
                 <View style={styles.statusGrid}>
-                  {['Stable', 'Risk', 'Relapse'].map((s) => (
+                  {(['Stable', 'Risk', 'Relapse'] as const).map((s) => (
                     <TouchableOpacity
                       key={s}
                       style={[styles.statusOption, mentalStatus === s && styles.statusOptionActive]}
                       onPress={() => setMentalStatus(s)}
                     >
-                      <Text style={[styles.statusOptionText, mentalStatus === s && styles.statusOptionTextActive]}>{s}</Text>
+                      <Text style={[styles.statusOptionText, mentalStatus === s && styles.statusOptionTextActive]}>{t(`status_values.${s}`, { defaultValue: s })}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
 
-                <Text style={[styles.label, { marginTop: spacing.md }]}>Detailed Notes</Text>
+                <Text style={[styles.label, { marginTop: spacing.md }]}>{t('patient_detail.detailed_notes')}</Text>
                 <TextInput
                   style={styles.textArea}
-                  placeholder="Observation notes..."
+                  placeholder={t('patient_detail.notes_placeholder')}
                   multiline
                   numberOfLines={4}
                   value={notes}
@@ -220,7 +222,7 @@ export default function PatientDetailScreen() {
                   <View style={[styles.checkbox, relapseSigns && styles.checkboxActive]}>
                     {relapseSigns && <Ionicons name="checkmark" size={16} color={colors.white} />}
                   </View>
-                  <Text style={styles.checkboxLabel}>Signs of relapse observed?</Text>
+                  <Text style={styles.checkboxLabel}>{t('patient_detail.relapse_signs')}</Text>
                 </TouchableOpacity>
 
                 <Button
@@ -229,18 +231,18 @@ export default function PatientDetailScreen() {
                   onPress={handleSubmitReport}
                   loading={isSubmitting}
                 >
-                  Submit Report
+                  {t('patient_detail.submit_report')}
                 </Button>
               </Card.Content>
             </Card>
           </>
         )}
 
-        <Text style={styles.sectionTitle}>{role === 'chw' ? 'Reminder History' : 'Follow-up History'}</Text>
+        <Text style={styles.sectionTitle}>{role === 'chw' ? t('patient_detail.reminder_history') : t('patient_detail.followup_history')}</Text>
         {role === 'chw' ? (
           reminders?.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <Text style={styles.emptyHistoryText}>No reminders found</Text>
+              <Text style={styles.emptyHistoryText}>{t('patient_detail.no_reminders')}</Text>
             </View>
           ) : (
             reminders?.map((item: any) => (
@@ -250,12 +252,30 @@ export default function PatientDetailScreen() {
                     <Text style={styles.historyStatus}>{item.title}</Text>
                     <Text style={styles.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
-                  <Text style={styles.historyNotes}>Type: {item.type}</Text>
-                  <Text style={styles.historyNotes}>Time: {item.time}</Text>
-                  {item.completed && (
+                  <Text style={styles.historyNotes}>{t('patient_detail.notes')}: {item.type}</Text>
+                  <Text style={styles.historyNotes}>{t('notifications.time_found')}: {item.time}</Text>
+                  {item.status && (
+                    <View style={[
+                      styles.relapseBadge, 
+                      { backgroundColor: item.status === 'ATTENDED' ? colors.successTint : item.status === 'MISSED' ? colors.errorTint : colors.warningTint }
+                    ]}>
+                      <Ionicons 
+                        name={item.status === 'ATTENDED' ? "checkmark-circle" : item.status === 'MISSED' ? "close-circle" : "time"} 
+                        size={12} 
+                        color={item.status === 'ATTENDED' ? colors.success : item.status === 'MISSED' ? colors.error : colors.warning} 
+                      />
+                      <Text style={[
+                        styles.relapseText, 
+                        { color: item.status === 'ATTENDED' ? colors.success : item.status === 'MISSED' ? colors.error : colors.warning }
+                      ]}>
+                        {t(`status_values.${item.status}`, { defaultValue: item.status })}
+                      </Text>
+                    </View>
+                  )}
+                  {item.completed && !item.status && (
                     <View style={[styles.relapseBadge, { backgroundColor: colors.successTint }]}>
                       <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                      <Text style={[styles.relapseText, { color: colors.success }]}>Completed</Text>
+                      <Text style={[styles.relapseText, { color: colors.success }]}>{t('patient_detail.completed')}</Text>
                     </View>
                   )}
                 </Card.Content>
@@ -265,21 +285,24 @@ export default function PatientDetailScreen() {
         ) : (
           history?.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <Text style={styles.emptyHistoryText}>No history records found</Text>
+              <Text style={styles.emptyHistoryText}>{t('patient_detail.no_history')}</Text>
             </View>
           ) : (
             history?.map((item: any) => (
               <Card key={item.id} style={styles.historyCard}>
                 <Card.Content>
                   <View style={styles.historyHeader}>
-                    <Text style={styles.historyStatus}>{item.mentalStatus}</Text>
+                    <Text style={styles.historyStatus}>{t(`status_values.${item.mentalStatus}`, { defaultValue: item.mentalStatus })}</Text>
                     <Text style={styles.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
                   <Text style={styles.historyNotes}>{item.notes}</Text>
+                  <Text style={styles.historySubmitter}>
+                    {t('patient_detail.by')}: {item.createdBy?.fullName || t('patients.unknown')}{item.createdBy?.village ? ` (${item.createdBy.village})` : ''}
+                  </Text>
                   {item.relapseSigns && (
                     <View style={styles.relapseBadge}>
                       <Ionicons name="warning" size={12} color={colors.error} />
-                      <Text style={styles.relapseText}>Relapse Signs Detected</Text>
+                      <Text style={styles.relapseText}>{t('patient_detail.relapse_detected')}</Text>
                     </View>
                   )}
                 </Card.Content>
@@ -542,6 +565,12 @@ const styles = StyleSheet.create({
   historyNotes: {
     ...typography.caption,
     color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  historySubmitter: {
+    ...typography.tiny,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
     marginBottom: spacing.xs,
   },
   relapseBadge: {

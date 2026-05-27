@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Container, Card, Input, Button } from '@/components/ui';
 import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
@@ -21,6 +21,11 @@ export default function SubmitReport() {
   const [selectedPatient, setSelectedPatient] = useState<number | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [editingReportId, setEditingReportId] = useState<number | null>(null);
+  
+  // Follow-up specific fields
+  const [reportType, setReportType] = useState<'regular' | 'followup'>('regular');
+  const [mentalStatus, setMentalStatus] = useState('Stable');
+  const [relapseSigns, setRelapseSigns] = useState(false);
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients', user?.id],
@@ -36,8 +41,30 @@ export default function SubmitReport() {
     enabled: !!user?.id,
   });
 
+  const { data: followups = [], refetch: refetchFollowups } = useQuery({
+    queryKey: ['followups', user?.id],
+    queryFn: () => api.globalFollowups({ chwId: String(user?.id) }),
+    staleTime: 1000 * 30,
+    enabled: !!user?.id,
+  });
+
+  const filteredHistory = useMemo(() => {
+    const history = reportType === 'followup' ? followups : reports;
+    return [...(history || [])].sort((a: any, b: any) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [reports, followups, reportType]);
+
   const submitMutation = useMutation({
     mutationFn: () => {
+      if (reportType === 'followup') {
+        return api.createFollowup(String(selectedPatient), {
+          mentalStatus,
+          notes: details,
+          relapseSigns,
+        });
+      }
+      
       const payload = {
         patientId: selectedPatient,
         createdByChwId: Number(user?.id || 0),
@@ -55,11 +82,15 @@ export default function SubmitReport() {
       setDetails('');
       setSelectedPatient(null);
       setEditingReportId(null);
+      setRelapseSigns(false);
+      setMentalStatus('Stable');
       
       // Force an immediate refetch of the reports list
       refetchReports();
+      refetchFollowups();
       
       queryClient.invalidateQueries({ queryKey: ['reports', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
       setTimeout(() => setStatusMessage(''), 3000);
     },
     onError: (error: any) => {
@@ -118,6 +149,28 @@ export default function SubmitReport() {
         
         <Card style={styles.card} variant="elevated">
           <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>{t('dashboard.select_report_type')}</Text>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity 
+                style={[styles.typeOption, reportType === 'regular' && styles.typeOptionActive]}
+                onPress={() => setReportType('regular')}
+              >
+                <Text style={[styles.typeText, reportType === 'regular' && styles.typeTextActive]}>
+                  {t('dashboard.regular_report')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.typeOption, reportType === 'followup' && styles.typeOptionActive]}
+                onPress={() => setReportType('followup')}
+              >
+                <Text style={[styles.typeText, reportType === 'followup' && styles.typeTextActive]}>
+                  {t('dashboard.followup_report')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.fieldWrapper}>
             <Text style={styles.fieldLabel}>{t('dashboard.patient_label')}</Text>
             <View style={styles.patientList}>
               {patients.map((patient: any) => (
@@ -141,10 +194,45 @@ export default function SubmitReport() {
             {!patients.length ? <Text style={styles.infoText}>{t('patients.unknown')}</Text> : null}
           </View>
 
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>{t('dashboard.report_title_label')}</Text>
-            <Input placeholder={t('dashboard.report_title_label')} value={title} onChangeText={setTitle} />
-          </View>
+          {reportType === 'regular' && (
+            <View style={styles.fieldWrapper}>
+              <Text style={styles.fieldLabel}>{t('dashboard.report_title_label')}</Text>
+              <Input placeholder={t('dashboard.report_title_label')} value={title} onChangeText={setTitle} />
+            </View>
+          )}
+
+          {reportType === 'followup' && (
+            <>
+              <View style={styles.fieldWrapper}>
+                <Text style={styles.fieldLabel}>{t('submit_report.mental_status')}</Text>
+                <View style={styles.statusGrid}>
+                  {(['Stable', 'Risk', 'Relapse'] as const).map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      style={[styles.statusOption, mentalStatus === s && styles.statusOptionActive]}
+                      onPress={() => setMentalStatus(s)}
+                    >
+                      <Text style={[styles.statusOptionText, mentalStatus === s && styles.statusOptionTextActive]}>
+                        {t(`status_values.${s}`, { defaultValue: s })}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.fieldWrapper}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setRelapseSigns(!relapseSigns)}
+                >
+                  <View style={[styles.checkbox, relapseSigns && styles.checkboxChecked]}>
+                    {relapseSigns && <Ionicons name="checkmark" size={16} color={colors.white} />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>{t('submit_report.observed_relapse')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           <View style={styles.fieldWrapper}>
             <Text style={styles.fieldLabel}>{t('dashboard.details_label')}</Text>
@@ -155,7 +243,7 @@ export default function SubmitReport() {
             <Button 
               variant="primary" 
               onPress={() => submitMutation.mutate()} 
-              disabled={!selectedPatient || !title || !details || submitMutation.isPending} 
+              disabled={!selectedPatient || (reportType === 'regular' && !title) || !details || submitMutation.isPending} 
               style={styles.button}
               loading={submitMutation.isPending}
             >
@@ -186,31 +274,53 @@ export default function SubmitReport() {
 
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>{t('dashboard.submitted_reports')}</Text>
-          {reports.length === 0 ? (
+          {filteredHistory.length === 0 ? (
             <Text style={styles.emptyText}>{t('dashboard.no_reports_yet')}</Text>
           ) : (
-            reports.map((report: any) => (
-              <Card key={report.id} style={styles.reportCard} variant="outlined">
-                <View style={styles.reportHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{report.title}</Text>
-                    <Text style={styles.reportPatient}>
-                      {t('dashboard.patient_label')}: {report.patient?.fullName || 'N/A'} ({formatPatientId(report.patientId)})
-                    </Text>
+            filteredHistory.map((report: any) => {
+              const isFollowup = !!report.mentalStatus;
+              return (
+                <Card key={`${isFollowup ? 'f' : 'r'}-${report.id}`} style={styles.reportCard} variant="outlined">
+                  <View style={styles.reportHeader}>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.reportTypeRow}>
+                        <Text style={styles.reportTitle}>
+                          {isFollowup ? t('dashboard.followup_report') : report.title}
+                        </Text>
+                        <View style={[styles.typeBadge, { backgroundColor: isFollowup ? colors.successTint : colors.primaryTint }]}>
+                          <Text style={[styles.typeBadgeText, { color: isFollowup ? colors.success : colors.primary }]}>
+                            {isFollowup ? t('submit_report.followup_badge') : t('submit_report.regular_badge')}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.reportPatient}>
+                        {t('dashboard.patient_label')}: {report.patient?.fullName || 'N/A'} ({formatPatientId(report.patientId)})
+                      </Text>
+                    </View>
+                    {!isFollowup && (
+                      <View style={styles.reportActions}>
+                        <TouchableOpacity onPress={() => handleEdit(report)} style={styles.actionBtn}>
+                          <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(report.id)} style={styles.actionBtn}>
+                          <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.reportActions}>
-                    <TouchableOpacity onPress={() => handleEdit(report)} style={styles.actionBtn}>
-                      <Ionicons name="create-outline" size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(report.id)} style={styles.actionBtn}>
-                      <Ionicons name="trash-outline" size={20} color={colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <Text style={styles.reportDetails} numberOfLines={2}>{report.details}</Text>
-                <Text style={styles.reportDate}>{new Date(report.createdAt).toLocaleDateString()}</Text>
-              </Card>
-            ))
+                  <Text style={styles.reportDetails} numberOfLines={2}>
+                    {isFollowup ? `${t('submit_report.status_prefix')}: ${t(`status_values.${report.mentalStatus}`, { defaultValue: report.mentalStatus })}\n${report.notes}` : report.details}
+                  </Text>
+                  {isFollowup && report.relapseSigns && (
+                    <View style={styles.relapseBadge}>
+                      <Ionicons name="warning" size={12} color={colors.error} />
+                      <Text style={styles.relapseText}>{t('patient_detail.relapse_detected')}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.reportDate}>{new Date(report.createdAt).toLocaleDateString()}</Text>
+                </Card>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -229,6 +339,24 @@ const styles = StyleSheet.create({
   card: { borderRadius: borderRadius.xl, padding: spacing.md, ...shadows.sm },
   fieldWrapper: { marginBottom: spacing.md },
   fieldLabel: { ...typography.captionBold, color: colors.textSecondary, marginBottom: spacing.xs },
+  
+  typeSelector: { flexDirection: 'row', gap: spacing.sm },
+  typeOption: { flex: 1, padding: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  typeOptionActive: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
+  typeText: { ...typography.captionBold, color: colors.textSecondary },
+  typeTextActive: { color: colors.primary },
+
+  statusGrid: { flexDirection: 'row', gap: spacing.sm },
+  statusOption: { flex: 1, padding: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  statusOptionActive: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
+  statusOptionText: { ...typography.caption, color: colors.textSecondary },
+  statusOptionTextActive: { color: colors.primary, fontWeight: '700' },
+
+  checkboxContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: colors.primary },
+  checkboxLabel: { ...typography.caption, color: colors.text },
+
   patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   patientOption: {
     paddingVertical: spacing.xs,
@@ -255,11 +383,16 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.md },
   reportCard: { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
   reportHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs },
+  reportTypeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
+  typeBadge: { paddingHorizontal: spacing.xs, paddingVertical: 2, borderRadius: borderRadius.sm },
+  typeBadgeText: { ...typography.tiny, fontWeight: '700' },
   reportTitle: { ...typography.bodyBold, color: colors.text },
   reportPatient: { ...typography.tiny, color: colors.textSecondary },
   reportActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { padding: 4 },
   reportDetails: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
+  relapseBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.errorTint, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start', marginBottom: spacing.xs },
+  relapseText: { ...typography.tiny, color: colors.error, fontWeight: '700' },
   reportDate: { ...typography.tiny, color: colors.textTertiary, textAlign: 'right' },
   emptyText: { ...typography.caption, color: colors.textTertiary, textAlign: 'center', marginTop: spacing.lg },
 });

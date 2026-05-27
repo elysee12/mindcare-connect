@@ -8,10 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterPatient() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const { patientId, edit, userId } = useLocalSearchParams<{ patientId?: string; edit?: string; userId?: string }>();
   const isEdit = edit === '1' && patientId;
 
@@ -90,7 +92,7 @@ export default function RegisterPatient() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera roll permissions are required to select an image.');
+      Alert.alert(t('register_patient.permission_needed'), t('register_patient.camera_permission'));
       return;
     }
 
@@ -143,19 +145,19 @@ export default function RegisterPatient() {
 
   const savePatient = async () => {
     if (!name || !age || !gender) {
-      Alert.alert('Validation Error', 'Please enter required fields: name, age, and gender.');
+      Alert.alert(t('register_patient.validation_error'), t('register_patient.required_fields'));
       return;
     }
 
     setIsLoading(true);
-    setStatusMessage('Saving patient...');
+    setStatusMessage(t('register_patient.saving'));
 
     try {
       let photoUrl = selectedImageUri;
 
       // If it's a local URI, upload it first
       if (selectedImageUri && selectedImageUri.startsWith('file://')) {
-        setStatusMessage('Uploading image...');
+        setStatusMessage(t('register_patient.uploading'));
         const uploadedUrl = await uploadImage(selectedImageUri);
         if (uploadedUrl) {
           photoUrl = uploadedUrl;
@@ -192,10 +194,10 @@ export default function RegisterPatient() {
 
       if (isEdit && patientId) {
         await api.updatePatient(patientId, payload);
-        setStatusMessage(`Patient ${name} updated successfully.`);
+        setStatusMessage(t('register_patient.patient_updated', { name }));
       } else {
         await api.createPatient(payload);
-        setStatusMessage(`Patient ${name} created successfully.`);
+        setStatusMessage(t('register_patient.patient_created', { name }));
       }
 
       setTimeout(() => {
@@ -238,7 +240,7 @@ export default function RegisterPatient() {
 
   const saveFamilyMember = async () => {
     if (!familyName || !familyEmail || !familyPhone) {
-      Alert.alert('Validation Error', 'Please provide family member name, email, and phone.');
+      Alert.alert(t('register_patient.validation_error'), t('register_patient.family_required_fields'));
       return;
     }
 
@@ -260,11 +262,11 @@ export default function RegisterPatient() {
       setAssignedFamily(String(savedFamily.id));
       setShowFamilyModal(false);
       setIsLoading(false);
-      Alert.alert('Success', `Family member ${savedFamily.fullName} registered and assigned.`);
+      Alert.alert(t('common.success'), t('register_patient.family_saved', { name: savedFamily.fullName }));
     } catch (error: any) {
       setIsLoading(false);
-      const errorMessage = error.message || 'Failed to save family member.';
-      Alert.alert('Error', errorMessage);
+      const errorMessage = error.message || t('common.error');
+      Alert.alert(t('common.error'), errorMessage);
     }
   };
 
@@ -273,27 +275,27 @@ export default function RegisterPatient() {
       <View style={styles.headbar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('register_patient.back')}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{isEdit ? 'Edit Patient' : 'Register Patient'}</Text>
-        <Text style={styles.subtitle}>{isEdit ? 'Update patient details' : 'Add patient details to the care network'}</Text>
+        <Text style={styles.title}>{isEdit ? t('register_patient.edit_title') : t('register_patient.title')}</Text>
+        <Text style={styles.subtitle}>{isEdit ? t('register_patient.edit_subtitle') : t('register_patient.subtitle')}</Text>
 
         <Card style={styles.card} variant="elevated">
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Full Name</Text>
-            <Input placeholder="Full Name" value={name} onChangeText={setName} autoCapitalize="words" />
+            <Text style={styles.fieldLabel}>{t('register_patient.full_name')}</Text>
+            <Input placeholder={t('register_patient.full_name')} value={name} onChangeText={setName} autoCapitalize="words" />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Age</Text>
-            <Input placeholder="Age" value={age} onChangeText={setAge} keyboardType="numeric" />
+            <Text style={styles.fieldLabel}>{t('register_patient.age')}</Text>
+            <Input placeholder={t('register_patient.age')} value={age} onChangeText={setAge} keyboardType="numeric" />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Gender</Text>
+            <Text style={styles.fieldLabel}>{t('register_patient.gender')}</Text>
             <View style={styles.radioGroup}>
               <TouchableOpacity
                 style={[
@@ -308,7 +310,7 @@ export default function RegisterPatient() {
                     gender === 'Male' && styles.radioCircleSelected,
                   ]}
                 />
-                <Text style={styles.radioButtonText}>Male</Text>
+                <Text style={styles.radioButtonText}>{t('register_patient.male')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -324,47 +326,47 @@ export default function RegisterPatient() {
                     gender === 'Female' && styles.radioCircleSelected,
                   ]}
                 />
-                <Text style={styles.radioButtonText}>Female</Text>
+                <Text style={styles.radioButtonText}>{t('register_patient.female')}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Contact Number (Optional)</Text>
-            <Input placeholder="Contact Number" value={contact} onChangeText={setContact} keyboardType="phone-pad" />
+            <Text style={styles.fieldLabel}>{t('register_patient.contact_optional')}</Text>
+            <Input placeholder={t('register_patient.contact_optional')} value={contact} onChangeText={setContact} keyboardType="phone-pad" />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Diagnosis</Text>
-            <Input placeholder="Diagnosis" value={diagnosis} onChangeText={setDiagnosis} />
+            <Text style={styles.fieldLabel}>{t('register_patient.diagnosis')}</Text>
+            <Input placeholder={t('register_patient.diagnosis')} value={diagnosis} onChangeText={setDiagnosis} />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Status</Text>
-            <Input placeholder="Status" value={status} onChangeText={setStatus} />
+            <Text style={styles.fieldLabel}>{t('register_patient.status')}</Text>
+            <Input placeholder={t('register_patient.status')} value={status} onChangeText={setStatus} />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Risk Level</Text>
-            <Input placeholder="Risk Level" value={riskLevel} onChangeText={setRiskLevel} />
+            <Text style={styles.fieldLabel}>{t('register_patient.risk_level')}</Text>
+            <Input placeholder={t('register_patient.risk_level')} value={riskLevel} onChangeText={setRiskLevel} />
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Profile Photo</Text>
+            <Text style={styles.fieldLabel}>{t('register_patient.profile_photo')}</Text>
             <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
               <Ionicons name="camera" size={24} color={colors.primary} />
-              <Text style={styles.uploadButtonText}>Select Photo</Text>
+              <Text style={styles.uploadButtonText}>{t('register_patient.select_photo')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.imagePreviewWrapper}>
-            <Text style={styles.fieldLabel}>Profile Preview</Text>
+            <Text style={styles.fieldLabel}>{t('register_patient.profile_preview')}</Text>
             <View style={styles.imagePreviewBox}>
               <Image source={{ uri: selectedImageUri || 'https://via.placeholder.com/120' }} style={styles.imagePreview} />
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Address</Text>
+          <Text style={styles.sectionTitle}>{t('register_patient.address')}</Text>
 
           <LocationPicker
             province={province}
@@ -379,12 +381,12 @@ export default function RegisterPatient() {
             onVillageChange={setVillage}
           />
 
-          <Text style={styles.sectionTitle}>Assign Help</Text>
+          <Text style={styles.sectionTitle}>{t('register_patient.assign_help')}</Text>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Assign CHW (Optional)</Text>
+            <Text style={styles.fieldLabel}>{t('register_patient.assign_chw')}</Text>
             <TouchableOpacity style={styles.dropdown} onPress={() => setShowChwDropdown(!showChwDropdown)}>
-              <Text style={styles.dropdownText}>{assignedChw || 'Select CHW'}</Text>
+              <Text style={styles.dropdownText}>{assignedChw || t('register_patient.select_chw')}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             {showChwDropdown && (
@@ -399,37 +401,37 @@ export default function RegisterPatient() {
           </View>
 
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Assign Family Member (Optional)</Text>
+            <Text style={styles.fieldLabel}>{t('register_patient.assign_family')}</Text>
             <Button
               variant="secondary"
               onPress={() => setShowFamilyModal(true)}
               size="md"
             >
-              {assignedFamily ? 'Edit Family Member' : 'Add Family Member'}
+              {assignedFamily ? t('register_patient.edit_family') : t('register_patient.add_family')}
             </Button>
             {assignedFamily ? (
-              <Text style={[styles.patientDetail, { marginTop: spacing.xs }]}>Assigned: {familyName || assignedFamily}</Text>
+              <Text style={[styles.patientDetail, { marginTop: spacing.xs }]}>{t('register_patient.assigned_label')}: {familyName || assignedFamily}</Text>
             ) : null}
           </View>
 
           <Modal transparent animationType="slide" visible={showFamilyModal} onRequestClose={() => setShowFamilyModal(false)}>
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                <Text style={styles.sectionTitle}>Family Member Details</Text>
+                <Text style={styles.sectionTitle}>{t('register_patient.family_details')}</Text>
 
                 <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Full Name</Text>
-                  <Input placeholder="Full Name" value={familyName} onChangeText={setFamilyName} autoCapitalize="words" />
+                  <Text style={styles.fieldLabel}>{t('register_patient.family_name')}</Text>
+                  <Input placeholder={t('register_patient.family_name')} value={familyName} onChangeText={setFamilyName} autoCapitalize="words" />
                 </View>
 
                 <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Email</Text>
-                  <Input placeholder="Email" value={familyEmail} onChangeText={setFamilyEmail} keyboardType="email-address" />
+                  <Text style={styles.fieldLabel}>{t('register_patient.family_email')}</Text>
+                  <Input placeholder={t('register_patient.family_email')} value={familyEmail} onChangeText={setFamilyEmail} keyboardType="email-address" />
                 </View>
 
                 <View style={styles.fieldWrapper}>
-                  <Text style={styles.fieldLabel}>Phone</Text>
-                  <Input placeholder="Phone" value={familyPhone} onChangeText={setFamilyPhone} keyboardType="phone-pad" />
+                  <Text style={styles.fieldLabel}>{t('register_patient.family_phone')}</Text>
+                  <Input placeholder={t('register_patient.family_phone')} value={familyPhone} onChangeText={setFamilyPhone} keyboardType="phone-pad" />
                 </View>
 
                 <LocationPicker
@@ -447,9 +449,9 @@ export default function RegisterPatient() {
 
                 <View style={styles.buttonWrapper}>
                   <Button variant="primary" onPress={saveFamilyMember} disabled={isLoading}>
-                    {isLoading ? 'Saving...' : 'Save Family Member'}
+                    {isLoading ? t('register_patient.saving_family') : t('register_patient.save_family')}
                   </Button>
-                  <Button variant="ghost" onPress={() => setShowFamilyModal(false)} disabled={isLoading}>Cancel</Button>
+                  <Button variant="ghost" onPress={() => setShowFamilyModal(false)} disabled={isLoading}>{t('common.cancel')}</Button>
                 </View>
               </View>
             </View>
@@ -463,7 +465,7 @@ export default function RegisterPatient() {
               onPress={savePatient}
               disabled={isLoading}
             >
-              {isLoading ? 'Processing...' : (isEdit ? 'Update Patient' : 'Register Patient')}
+              {isLoading ? t('register_patient.processing') : (isEdit ? t('register_patient.update_btn') : t('register_patient.register_btn'))}
             </Button>
           </View>
         </Card>
