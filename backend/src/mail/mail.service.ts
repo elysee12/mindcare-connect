@@ -1,23 +1,23 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as Brevo from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 
 /**
- * MailService — uses Brevo's HTTP Transactional Email API.
+ * MailService — uses Brevo's HTTP Transactional Email API (v5 SDK).
  *
  * Why HTTP instead of SMTP?
- * Render's free tier blocks outbound SMTP connections (ports 25, 465, 587).
+ * Render's free tier blocks outbound SMTP (ports 25, 465, 587).
  * Brevo's REST API goes over HTTPS (port 443) which is always open.
  *
  * Required environment variables:
  *   BREVO_API_KEY   — your Brevo API key (v3)
- *   MAIL_FROM       — sender address verified in Brevo (optional, defaults below)
+ *   MAIL_FROM       — sender address verified in Brevo (defaults below)
  *   MAIL_FROM_NAME  — sender display name (optional)
  */
 @Injectable()
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private apiInstance: Brevo.TransactionalEmailsApi | null = null;
-  private fromEmail = 'noreply@mindcareconnect.com';
+  private client: BrevoClient | null = null;
+  private fromEmail = 'connectmindcare@gmail.com';
   private fromName = 'MindCare Connect';
 
   onModuleInit() {
@@ -30,20 +30,15 @@ export class MailService implements OnModuleInit {
       return;
     }
 
-    // Configure the Brevo SDK with the API key
-    const defaultClient = Brevo.ApiClient.instance;
-    const apiKeyAuth = defaultClient.authentications['api-key'];
-    apiKeyAuth.apiKey = apiKey;
-
-    this.apiInstance = new Brevo.TransactionalEmailsApi();
+    this.client = new BrevoClient({ apiKey });
 
     this.fromEmail =
-      process.env.MAIL_FROM?.trim() || 'noreply@mindcareconnect.com';
+      process.env.MAIL_FROM?.trim() || 'connectmindcare@gmail.com';
     this.fromName =
       process.env.MAIL_FROM_NAME?.trim() || 'MindCare Connect';
 
     this.logger.log(
-      `[MailService] ✅ Brevo HTTP API configured. Sending from: ${this.fromName} <${this.fromEmail}>`,
+      `[MailService] ✅ Brevo HTTP API ready. Sending from: ${this.fromName} <${this.fromEmail}>`,
     );
   }
 
@@ -51,29 +46,27 @@ export class MailService implements OnModuleInit {
    * Core send method — all other helpers call this.
    */
   async sendMail(to: string, subject: string, html: string): Promise<void> {
-    if (!this.apiInstance) {
+    if (!this.client) {
       this.logger.error(
-        '[MailService] Brevo API not initialised (missing BREVO_API_KEY). Skipping email.',
+        '[MailService] Brevo client not initialised (missing BREVO_API_KEY). Skipping email.',
       );
       return;
     }
 
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
-    sendSmtpEmail.sender = { name: this.fromName, email: this.fromEmail };
-    sendSmtpEmail.to = [{ email: to }];
-    sendSmtpEmail.subject = subject;
-    sendSmtpEmail.htmlContent = html;
-
     try {
-      const result = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
+      const result = await this.client.transactionalEmails.sendTransacEmail({
+        sender: { name: this.fromName, email: this.fromEmail },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      });
       this.logger.log(
-        `[MailService] ✅ Email sent to ${to} — messageId: ${(result as any)?.body?.messageId ?? 'n/a'}`,
+        `[MailService] ✅ Email sent to ${to} — messageId: ${(result as any)?.messageId ?? 'n/a'}`,
       );
     } catch (error: any) {
       this.logger.error(
         `[MailService] ❌ Failed to send email to ${to}: ${error?.message ?? error}`,
       );
-      // Re-throw so callers can handle failures if needed
       throw error;
     }
   }
