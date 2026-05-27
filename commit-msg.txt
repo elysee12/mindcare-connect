@@ -1,5 +1,0 @@
-ixdaeSDK usgeo v5 BevCliet APIThe @getbev/brvov5SDK reacd hold clss-bseAPI
-(TcEmaiApi, ApiClit,SeSmtpEmil) wih w
-oCinntnch xpocalEmas.sendTEmail().
-
-Upm.rvic.t toehcorrc v5API.
