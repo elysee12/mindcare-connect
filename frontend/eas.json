@@ -14,14 +14,22 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "BACKEND_URL": "https://mindcare-connect.onrender.com"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "BACKEND_URL": "https://mindcare-connect.onrender.com"
+      }
     }
   },
   "submit": {
     "production": {}
   }
 }
-
