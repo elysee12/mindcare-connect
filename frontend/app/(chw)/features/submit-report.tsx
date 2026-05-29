@@ -1,14 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Container, Card, Input, Button } from '@/components/ui';
-import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Container, Input } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'expo-router';
 import { formatPatientId } from '@/lib/format';
 import { useTranslation } from 'react-i18next';
+
+const STATUS_OPTS = ['Stable', 'Risk', 'Relapse'] as const;
+const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
+  Stable:  { color: '#2EB67D', bg: '#EAF7F3' },
+  Risk:    { color: '#F59E0B', bg: '#FEF3C7' },
+  Relapse: { color: '#EF4444', bg: '#FEE2E2' },
+};
 
 export default function SubmitReport() {
   const router = useRouter();
@@ -16,383 +23,330 @@ export default function SubmitReport() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const [title, setTitle] = useState('');
-  const [details, setDetails] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<number | null>(null);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [editingReportId, setEditingReportId] = useState<number | null>(null);
-  
-  // Follow-up specific fields
-  const [reportType, setReportType] = useState<'regular' | 'followup'>('regular');
-  const [mentalStatus, setMentalStatus] = useState('Stable');
-  const [relapseSigns, setRelapseSigns] = useState(false);
+  const [reportType, setReportType]       = useState<'regular' | 'followup'>('regular');
+  const [title, setTitle]                 = useState('');
+  const [details, setDetails]             = useState('');
+  const [selectedPatient, setSelectedP]   = useState<number | null>(null);
+  const [mentalStatus, setMentalStatus]   = useState('Stable');
+  const [relapseSigns, setRelapseSigns]   = useState(false);
+  const [editingId, setEditingId]         = useState<number | null>(null);
+  const [toast, setToast]                 = useState('');
+  const [toastError, setToastError]       = useState(false);
+
+  const showToast = (msg: string, err = false) => { setToast(msg); setToastError(err); setTimeout(() => setToast(''), 3000); };
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patients', user?.id],
     queryFn: () => api.patients(undefined, undefined, undefined, user?.id),
-    staleTime: 1000 * 60,
-    enabled: !!user?.id,
+    staleTime: 1000 * 60, enabled: !!user?.id,
   });
-
   const { data: reports = [], refetch: refetchReports } = useQuery({
     queryKey: ['reports', user?.id],
     queryFn: () => api.reports({ chwId: String(user?.id) }),
-    staleTime: 1000 * 30,
-    enabled: !!user?.id,
+    staleTime: 1000 * 30, enabled: !!user?.id,
   });
-
   const { data: followups = [], refetch: refetchFollowups } = useQuery({
     queryKey: ['followups', user?.id],
-    queryFn: () => api.globalFollowups({ chwId: String(user?.id) }),
-    staleTime: 1000 * 30,
-    enabled: !!user?.id,
+    queryFn: () => api.globalFollowups(),
+    staleTime: 1000 * 30, enabled: !!user?.id,
   });
 
-  const filteredHistory = useMemo(() => {
-    const history = reportType === 'followup' ? followups : reports;
-    return [...(history || [])].sort((a: any, b: any) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+  const history = useMemo(() => {
+    const src = reportType === 'followup' ? followups : reports;
+    return [...(src as any[])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [reports, followups, reportType]);
+
+  useEffect(() => {
+    if ((patients as any[]).length > 0 && selectedPatient === null && !editingId) {
+      setSelectedP((patients as any[])[0]?.id ?? null);
+    }
+  }, [patients]);
 
   const submitMutation = useMutation({
     mutationFn: () => {
       if (reportType === 'followup') {
-        return api.createFollowup(String(selectedPatient), {
-          mentalStatus,
-          notes: details,
-          relapseSigns,
-        });
+        return api.createFollowup(String(selectedPatient), { mentalStatus, notes: details, relapseSigns });
       }
-      
-      const payload = {
-        patientId: selectedPatient,
-        createdByChwId: Number(user?.id || 0),
-        title,
-        details,
-      };
-      if (editingReportId) {
-        return api.updateReport(editingReportId, payload);
-      }
-      return api.submitReport(payload);
+      const payload = { patientId: selectedPatient, createdByChwId: Number(user?.id || 0), title, details };
+      return editingId ? api.updateReport(editingId, payload) : api.submitReport(payload);
     },
     onSuccess: () => {
-      setStatusMessage(editingReportId ? t('dashboard.report_update_success') : t('dashboard.report_submit_success'));
-      setTitle('');
-      setDetails('');
-      setSelectedPatient(null);
-      setEditingReportId(null);
-      setRelapseSigns(false);
-      setMentalStatus('Stable');
-      
-      // Force an immediate refetch of the reports list
-      refetchReports();
-      refetchFollowups();
-      
+      showToast(editingId ? t('dashboard.report_update_success') : t('dashboard.report_submit_success'));
+      setTitle(''); setDetails(''); setSelectedP(null); setEditingId(null);
+      setRelapseSigns(false); setMentalStatus('Stable');
+      refetchReports(); refetchFollowups();
       queryClient.invalidateQueries({ queryKey: ['reports', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['followups'] });
-      setTimeout(() => setStatusMessage(''), 3000);
     },
-    onError: (error: any) => {
-      setStatusMessage(`${t('common.error')}: ${error.message}`);
-      setTimeout(() => setStatusMessage(''), 5000);
-    },
+    onError: (e: any) => showToast(`${t('common.error')}: ${e.message}`, true),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.deleteReport(id),
-    onSuccess: () => {
-      refetchReports();
-      queryClient.invalidateQueries({ queryKey: ['reports', user?.id] });
-    },
-    onError: (error: any) => {
-      Alert.alert(t('common.error'), error.message);
-    },
+    onSuccess: () => { refetchReports(); queryClient.invalidateQueries({ queryKey: ['reports', user?.id] }); },
+    onError: (e: any) => Alert.alert(t('common.error'), e.message),
   });
 
-  const handleEdit = (report: any) => {
-    setEditingReportId(report.id);
-    setTitle(report.title);
-    setDetails(report.details);
-    setSelectedPatient(report.patientId);
-  };
+  const handleEdit = (r: any) => { setEditingId(r.id); setTitle(r.title); setDetails(r.details); setSelectedP(r.patientId); };
+  const handleDelete = (id: number) => Alert.alert(
+    t('dashboard.delete_report_title'), t('dashboard.delete_report_confirm'),
+    [{ text: t('common.cancel'), style: 'cancel' }, { text: t('common.delete'), style: 'destructive', onPress: () => deleteMutation.mutate(id) }]
+  );
 
-  const handleDelete = (id: number) => {
-    Alert.alert(
-      t('dashboard.delete_report_title'),
-      t('dashboard.delete_report_confirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => deleteMutation.mutate(id) },
-      ]
-    );
-  };
-
-  useEffect(() => {
-    if (patients.length > 0 && selectedPatient === null && !editingReportId) {
-      setSelectedPatient(patients[0]?.id ?? null);
-    }
-  }, [patients, selectedPatient, editingReportId]);
+  const canSubmit = !!selectedPatient && (reportType === 'followup' || !!title) && !!details;
 
   return (
-    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
-      <View style={styles.headbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>{t('common.back')}</Text>
+    <Container safeArea edges={['top']} style={S.container}>
+      <LinearGradient colors={['#1E40AF', '#3B82F6']} style={S.header}>
+        <TouchableOpacity style={S.backCircle} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={18} color="#fff" />
         </TouchableOpacity>
-      </View>
+        <View style={S.headerCenter}>
+          <Text style={S.headerTitle}>{t('dashboard.report')}</Text>
+          <Text style={S.headerSub}>{editingId ? t('dashboard.update_clinical_report') : t('dashboard.send_clinical_report')}</Text>
+        </View>
+      </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{t('dashboard.report')}</Text>
-        <Text style={styles.subtitle}>{editingReportId ? t('dashboard.update_clinical_report') : t('dashboard.send_clinical_report')}</Text>
-        
-        <Card style={styles.card} variant="elevated">
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>{t('dashboard.select_report_type')}</Text>
-            <View style={styles.typeSelector}>
-              <TouchableOpacity 
-                style={[styles.typeOption, reportType === 'regular' && styles.typeOptionActive]}
-                onPress={() => setReportType('regular')}
+      <ScrollView contentContainerStyle={S.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+        {/* Report type toggle */}
+        <View style={S.section}>
+          <Text style={S.sectionLabel}>{t('dashboard.select_report_type')}</Text>
+          <View style={S.typeRow}>
+            {(['regular', 'followup'] as const).map(rt => (
+              <TouchableOpacity
+                key={rt}
+                style={[S.typeBtn, reportType === rt && S.typeBtnActive]}
+                onPress={() => setReportType(rt)}
               >
-                <Text style={[styles.typeText, reportType === 'regular' && styles.typeTextActive]}>
-                  {t('dashboard.regular_report')}
+                <Ionicons
+                  name={rt === 'regular' ? 'document-text-outline' : 'calendar-outline'}
+                  size={16}
+                  color={reportType === rt ? '#fff' : '#64748B'}
+                />
+                <Text style={[S.typeBtnText, reportType === rt && S.typeBtnTextActive]}>
+                  {rt === 'regular' ? t('dashboard.regular_report') : t('dashboard.followup_report')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.typeOption, reportType === 'followup' && styles.typeOptionActive]}
-                onPress={() => setReportType('followup')}
+            ))}
+          </View>
+        </View>
+
+        {/* Patient selector */}
+        <View style={S.section}>
+          <Text style={S.sectionLabel}>{t('dashboard.patient_label')}</Text>
+          <View style={S.patientGrid}>
+            {(patients as any[]).map((p: any) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[S.patientChip, selectedPatient === p.id && S.patientChipActive]}
+                onPress={() => setSelectedP(p.id)}
               >
-                <Text style={[styles.typeText, reportType === 'followup' && styles.typeTextActive]}>
-                  {t('dashboard.followup_report')}
+                <Text style={[S.patientChipText, selectedPatient === p.id && S.patientChipTextActive]}>
+                  {p.fullName} ({formatPatientId(p.id)})
                 </Text>
               </TouchableOpacity>
-            </View>
+            ))}
+            {!(patients as any[]).length && <Text style={S.emptyText}>{t('patients.unknown')}</Text>}
           </View>
+        </View>
 
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>{t('dashboard.patient_label')}</Text>
-            <View style={styles.patientList}>
-              {patients.map((patient: any) => (
-                <TouchableOpacity
-                  key={patient.id}
-                  onPress={() => setSelectedPatient(patient.id)}
-                  style={[
-                    styles.patientOption,
-                    selectedPatient === patient.id ? styles.patientOptionActive : null,
-                  ]}
-                >
-                  <Text style={[
-                    styles.patientOptionText,
-                    selectedPatient === patient.id ? styles.patientOptionTextActive : null
-                  ]}>
-                    {patient.fullName} ({formatPatientId(patient.id)})
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {!patients.length ? <Text style={styles.infoText}>{t('patients.unknown')}</Text> : null}
+        {/* Regular: title */}
+        {reportType === 'regular' && (
+          <View style={S.section}>
+            <Text style={S.sectionLabel}>{t('dashboard.report_title_label')}</Text>
+            <Input placeholder={t('dashboard.report_title_label')} value={title} onChangeText={setTitle} />
           </View>
+        )}
 
-          {reportType === 'regular' && (
-            <View style={styles.fieldWrapper}>
-              <Text style={styles.fieldLabel}>{t('dashboard.report_title_label')}</Text>
-              <Input placeholder={t('dashboard.report_title_label')} value={title} onChangeText={setTitle} />
-            </View>
-          )}
-
-          {reportType === 'followup' && (
-            <>
-              <View style={styles.fieldWrapper}>
-                <Text style={styles.fieldLabel}>{t('submit_report.mental_status')}</Text>
-                <View style={styles.statusGrid}>
-                  {(['Stable', 'Risk', 'Relapse'] as const).map((s) => (
+        {/* Follow-up: mental status + relapse */}
+        {reportType === 'followup' && (
+          <>
+            <View style={S.section}>
+              <Text style={S.sectionLabel}>{t('submit_report.mental_status')}</Text>
+              <View style={S.statusRow}>
+                {STATUS_OPTS.map(s => {
+                  const meta = STATUS_COLORS[s];
+                  const active = mentalStatus === s;
+                  return (
                     <TouchableOpacity
                       key={s}
-                      style={[styles.statusOption, mentalStatus === s && styles.statusOptionActive]}
+                      style={[S.statusBtn, active && { backgroundColor: meta.bg, borderColor: meta.color }]}
                       onPress={() => setMentalStatus(s)}
                     >
-                      <Text style={[styles.statusOptionText, mentalStatus === s && styles.statusOptionTextActive]}>
+                      {active && <View style={[S.statusDot, { backgroundColor: meta.color }]} />}
+                      <Text style={[S.statusBtnText, active && { color: meta.color, fontWeight: '700' }]}>
                         {t(`status_values.${s}`, { defaultValue: s })}
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
+                  );
+                })}
               </View>
-
-              <View style={styles.fieldWrapper}>
-                <TouchableOpacity
-                  style={styles.checkboxContainer}
-                  onPress={() => setRelapseSigns(!relapseSigns)}
-                >
-                  <View style={[styles.checkbox, relapseSigns && styles.checkboxChecked]}>
-                    {relapseSigns && <Ionicons name="checkmark" size={16} color={colors.white} />}
-                  </View>
-                  <Text style={styles.checkboxLabel}>{t('submit_report.observed_relapse')}</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>{t('dashboard.details_label')}</Text>
-            <Input placeholder={t('dashboard.details_label')} value={details} onChangeText={setDetails} multiline style={{ height: 110 }} />
-          </View>
-
-          <View style={styles.buttonRow}>
-            <Button 
-              variant="primary" 
-              onPress={() => submitMutation.mutate()} 
-              disabled={!selectedPatient || (reportType === 'regular' && !title) || !details || submitMutation.isPending} 
-              style={styles.button}
-              loading={submitMutation.isPending}
-            >
-              {editingReportId ? t('dashboard.update_btn') : t('dashboard.submit_btn')}
-            </Button>
-            {editingReportId && (
-              <Button 
-                variant="ghost" 
-                onPress={() => {
-                  setEditingReportId(null);
-                  setTitle('');
-                  setDetails('');
-                  setSelectedPatient(patients[0]?.id || null);
-                }} 
-                style={styles.cancelBtn}
-              >
-                {t('common.cancel')}
-              </Button>
-            )}
-          </View>
-
-          {statusMessage ? (
-            <View style={[styles.toast, statusMessage.includes(t('common.error')) && { backgroundColor: colors.error }]}>
-              <Text style={styles.toastText}>{statusMessage}</Text>
             </View>
-          ) : null}
-        </Card>
 
-        <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>{t('dashboard.submitted_reports')}</Text>
-          {filteredHistory.length === 0 ? (
-            <Text style={styles.emptyText}>{t('dashboard.no_reports_yet')}</Text>
+            <View style={S.section}>
+              <TouchableOpacity style={S.checkRow} onPress={() => setRelapseSigns(!relapseSigns)}>
+                <View style={[S.checkbox, relapseSigns && S.checkboxChecked]}>
+                  {relapseSigns && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={S.checkLabel}>{t('submit_report.observed_relapse')}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {/* Details */}
+        <View style={S.section}>
+          <Text style={S.sectionLabel}>{t('dashboard.details_label')}</Text>
+          <Input placeholder={t('dashboard.details_label')} value={details} onChangeText={setDetails} multiline style={{ height: 110 }} />
+        </View>
+
+        {/* Submit button */}
+        <View style={S.section}>
+          <TouchableOpacity
+            style={[S.submitBtn, (!canSubmit || submitMutation.isPending) && S.submitBtnDisabled]}
+            onPress={() => submitMutation.mutate()}
+            disabled={!canSubmit || submitMutation.isPending}
+          >
+            {submitMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <><Ionicons name="send-outline" size={16} color="#fff" /><Text style={S.submitBtnText}>{editingId ? t('dashboard.update_btn') : t('dashboard.submit_btn')}</Text></>
+            }
+          </TouchableOpacity>
+          {editingId && (
+            <TouchableOpacity style={S.cancelBtn} onPress={() => { setEditingId(null); setTitle(''); setDetails(''); setSelectedP((patients as any[])[0]?.id || null); }}>
+              <Text style={S.cancelBtnText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* History */}
+        <View style={S.historySection}>
+          <Text style={S.historyTitle}>{t('dashboard.submitted_reports')}</Text>
+          {history.length === 0 ? (
+            <View style={S.emptyHistory}>
+              <Ionicons name="document-text-outline" size={36} color="#E2E8F0" />
+              <Text style={S.emptyText}>{t('dashboard.no_reports_yet')}</Text>
+            </View>
           ) : (
-            filteredHistory.map((report: any) => {
-              const isFollowup = !!report.mentalStatus;
+            history.map((r: any) => {
+              const isF = !!r.mentalStatus;
+              const accent = isF ? '#2EB67D' : '#3B82F6';
+              const sc = r.mentalStatus === 'Stable' ? '#2EB67D' : r.mentalStatus === 'Relapse' ? '#EF4444' : '#F59E0B';
               return (
-                <Card key={`${isFollowup ? 'f' : 'r'}-${report.id}`} style={styles.reportCard} variant="outlined">
-                  <View style={styles.reportHeader}>
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.reportTypeRow}>
-                        <Text style={styles.reportTitle}>
-                          {isFollowup ? t('dashboard.followup_report') : report.title}
-                        </Text>
-                        <View style={[styles.typeBadge, { backgroundColor: isFollowup ? colors.successTint : colors.primaryTint }]}>
-                          <Text style={[styles.typeBadgeText, { color: isFollowup ? colors.success : colors.primary }]}>
-                            {isFollowup ? t('submit_report.followup_badge') : t('submit_report.regular_badge')}
-                          </Text>
-                        </View>
+                <View key={`${isF ? 'f' : 'r'}-${r.id}`} style={S.histCard}>
+                  <View style={[S.histBar, { backgroundColor: accent }]} />
+                  <View style={S.histBody}>
+                    <View style={S.histTop}>
+                      <View style={S.histLeft}>
+                        <Text style={S.histTitle} numberOfLines={1}>{isF ? t('dashboard.followup_report') : r.title}</Text>
+                        <Text style={S.histPatient}>{r.patient?.fullName || 'N/A'} · {formatPatientId(r.patientId)}</Text>
                       </View>
-                      <Text style={styles.reportPatient}>
-                        {t('dashboard.patient_label')}: {report.patient?.fullName || 'N/A'} ({formatPatientId(report.patientId)})
-                      </Text>
+                      <View style={[S.histBadge, { backgroundColor: accent + '18' }]}>
+                        <Text style={[S.histBadgeText, { color: accent }]}>{isF ? t('submit_report.followup_badge') : t('submit_report.regular_badge')}</Text>
+                      </View>
                     </View>
-                    {!isFollowup && (
-                      <View style={styles.reportActions}>
-                        <TouchableOpacity onPress={() => handleEdit(report)} style={styles.actionBtn}>
-                          <Ionicons name="create-outline" size={20} color={colors.primary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleDelete(report.id)} style={styles.actionBtn}>
-                          <Ionicons name="trash-outline" size={20} color={colors.error} />
-                        </TouchableOpacity>
+                    {isF ? (
+                      <View style={S.histStatusRow}>
+                        <View style={[S.histStatusDot, { backgroundColor: sc }]} />
+                        <Text style={[S.histStatusText, { color: sc }]}>{t(`status_values.${r.mentalStatus}`, { defaultValue: r.mentalStatus })}</Text>
+                        {r.relapseSigns && (
+                          <View style={S.relapsePill}>
+                            <Ionicons name="warning" size={10} color="#EF4444" />
+                            <Text style={S.relapseText}>{t('patient_detail.relapse_detected')}</Text>
+                          </View>
+                        )}
                       </View>
+                    ) : (
+                      <Text style={S.histDetails} numberOfLines={2}>{r.details}</Text>
                     )}
-                  </View>
-                  <Text style={styles.reportDetails} numberOfLines={2}>
-                    {isFollowup ? `${t('submit_report.status_prefix')}: ${t(`status_values.${report.mentalStatus}`, { defaultValue: report.mentalStatus })}\n${report.notes}` : report.details}
-                  </Text>
-                  {isFollowup && report.relapseSigns && (
-                    <View style={styles.relapseBadge}>
-                      <Ionicons name="warning" size={12} color={colors.error} />
-                      <Text style={styles.relapseText}>{t('patient_detail.relapse_detected')}</Text>
+                    <View style={S.histFooter}>
+                      <Text style={S.histDate}>{new Date(r.createdAt).toLocaleDateString()}</Text>
+                      {!isF && (
+                        <View style={S.histActions}>
+                          <TouchableOpacity style={S.histActionBtn} onPress={() => handleEdit(r)}>
+                            <Ionicons name="create-outline" size={16} color="#3B82F6" />
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[S.histActionBtn, { backgroundColor: '#FEE2E2' }]} onPress={() => handleDelete(r.id)}>
+                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
-                  )}
-                  <Text style={styles.reportDate}>{new Date(report.createdAt).toLocaleDateString()}</Text>
-                </Card>
+                  </View>
+                </View>
               );
             })
           )}
         </View>
+
       </ScrollView>
+
+      {toast ? (
+        <View style={[S.toast, toastError && { backgroundColor: '#EF4444' }]}>
+          <Text style={S.toastText}>{toast}</Text>
+        </View>
+      ) : null}
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
-  headbar: { padding: spacing.md, backgroundColor: colors.background, borderBottomColor: colors.border, borderBottomWidth: 1 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  backText: { ...typography.body, color: colors.primary, marginLeft: spacing.xs },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxxl, gap: spacing.sm },
-  title: { ...typography.h2, color: colors.primaryDark, marginBottom: spacing.xs },
-  subtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
-  card: { borderRadius: borderRadius.xl, padding: spacing.md, ...shadows.sm },
-  fieldWrapper: { marginBottom: spacing.md },
-  fieldLabel: { ...typography.captionBold, color: colors.textSecondary, marginBottom: spacing.xs },
-  
-  typeSelector: { flexDirection: 'row', gap: spacing.sm },
-  typeOption: { flex: 1, padding: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  typeOptionActive: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
-  typeText: { ...typography.captionBold, color: colors.textSecondary },
-  typeTextActive: { color: colors.primary },
-
-  statusGrid: { flexDirection: 'row', gap: spacing.sm },
-  statusOption: { flex: 1, padding: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  statusOptionActive: { backgroundColor: colors.primaryTint, borderColor: colors.primary },
-  statusOptionText: { ...typography.caption, color: colors.textSecondary },
-  statusOptionTextActive: { color: colors.primary, fontWeight: '700' },
-
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  checkboxChecked: { backgroundColor: colors.primary },
-  checkboxLabel: { ...typography.caption, color: colors.text },
-
-  patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  patientOption: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
-  patientOptionActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryTint,
-  },
-  patientOptionText: { ...typography.caption, color: colors.text },
-  patientOptionTextActive: { color: colors.primary, fontWeight: '700' },
-  buttonRow: { gap: spacing.sm },
-  button: { flex: 1 },
-  cancelBtn: { flex: 1 },
-  toast: { position: 'absolute', bottom: -10, left: 0, right: 0, backgroundColor: colors.success, borderRadius: borderRadius.lg, padding: spacing.sm, alignItems: 'center', zIndex: 10 },
-  toastText: { ...typography.captionBold, color: colors.white },
-  infoText: { ...typography.caption, color: colors.textTertiary, fontStyle: 'italic' },
-  
-  historySection: { marginTop: spacing.xl },
-  sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.md },
-  reportCard: { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
-  reportHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs },
-  reportTypeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
-  typeBadge: { paddingHorizontal: spacing.xs, paddingVertical: 2, borderRadius: borderRadius.sm },
-  typeBadgeText: { ...typography.tiny, fontWeight: '700' },
-  reportTitle: { ...typography.bodyBold, color: colors.text },
-  reportPatient: { ...typography.tiny, color: colors.textSecondary },
-  reportActions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: { padding: 4 },
-  reportDetails: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
-  relapseBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.errorTint, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start', marginBottom: spacing.xs },
-  relapseText: { ...typography.tiny, color: colors.error, fontWeight: '700' },
-  reportDate: { ...typography.tiny, color: colors.textTertiary, textAlign: 'right' },
-  emptyText: { ...typography.caption, color: colors.textTertiary, textAlign: 'center', marginTop: spacing.lg },
+const S = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  backCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  scroll: { padding: 16, paddingBottom: 80 },
+  section: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  typeRow: { flexDirection: 'row', gap: 10 },
+  typeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  typeBtnActive: { backgroundColor: '#3B82F6', borderColor: '#3B82F6' },
+  typeBtnText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  typeBtnTextActive: { color: '#fff' },
+  patientGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  patientChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  patientChipActive: { backgroundColor: '#DBEAFE', borderColor: '#3B82F6' },
+  patientChipText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  patientChipTextActive: { color: '#1D4ED8', fontWeight: '700' },
+  statusRow: { flexDirection: 'row', gap: 8 },
+  statusBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 10, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusBtnText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' },
+  checkboxChecked: { backgroundColor: '#3B82F6' },
+  checkLabel: { fontSize: 14, color: '#1E293B' },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3B82F6', borderRadius: 14, paddingVertical: 14 },
+  submitBtnDisabled: { opacity: 0.5 },
+  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  cancelBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
+  cancelBtnText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  emptyText: { fontSize: 13, color: '#94A3B8', fontStyle: 'italic' },
+  historySection: { marginTop: 8 },
+  historyTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 12 },
+  emptyHistory: { alignItems: 'center', paddingVertical: 32, gap: 10 },
+  histCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  histBar: { width: 4 },
+  histBody: { flex: 1, padding: 12, gap: 6 },
+  histTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  histLeft: { flex: 1, marginRight: 8 },
+  histTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  histPatient: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  histBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  histBadgeText: { fontSize: 10, fontWeight: '700' },
+  histStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  histStatusDot: { width: 7, height: 7, borderRadius: 4 },
+  histStatusText: { fontSize: 12, fontWeight: '600' },
+  relapsePill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  relapseText: { fontSize: 10, fontWeight: '700', color: '#EF4444' },
+  histDetails: { fontSize: 12, color: '#64748B', lineHeight: 18 },
+  histFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  histDate: { fontSize: 10, color: '#CBD5E1' },
+  histActions: { flexDirection: 'row', gap: 6 },
+  histActionBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' },
+  toast: { position: 'absolute', bottom: 32, left: 16, right: 16, backgroundColor: '#1E293B', borderRadius: 14, padding: 14, alignItems: 'center' },
+  toastText: { fontSize: 13, fontWeight: '600', color: '#fff' },
 });

@@ -42,6 +42,7 @@ export const colors = {
   background: '#FFFFFF',
   backgroundSecondary: '#F8FAFC',
   backgroundTertiary: '#F1F5F9',
+  backgroundAlt: '#F1F5F9',
 
   // Dark Mode Backgrounds
   backgroundDark: '#0F172A',
@@ -198,6 +199,12 @@ export const typography = {
   tiny: {
     fontSize: 10,
     fontWeight: '400' as const,
+    lineHeight: 12,
+    letterSpacing: 0,
+  },
+  tinyBold: {
+    fontSize: 10,
+    fontWeight: '700' as const,
     lineHeight: 12,
     letterSpacing: 0,
   },

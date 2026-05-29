@@ -1,11 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
-import { Container, Card, Button } from '@/components/ui';
-import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Container } from '@/components/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 type SettingType = 'dark_mode' | 'language';
+
+const ROLE_GRAD: Record<string, [string, string]> = {
+  mhp:    ['#1a6b4a', '#2EB67D'],
+  chw:    ['#1E40AF', '#3B82F6'],
+  family: ['#7C3AED', '#A78BFA'],
+  admin:  ['#B45309', '#F59E0B'],
+};
 
 export default function AppPreferences() {
   const router = useRouter();
@@ -14,144 +22,143 @@ export default function AppPreferences() {
 
   const [activeSetting, setActiveSetting] = useState<SettingType>(setting as SettingType);
   const [theme, setTheme] = useState<'System' | 'Light' | 'Dark'>('System');
-  const [savedMessage, setSavedMessage] = useState('');
 
-  const roleLabel = role.toUpperCase();
-
-  const settingTitle = useMemo(() => {
-    if (activeSetting === 'language') return t('profile.language');
-    return t('profile.dark_mode');
-  }, [activeSetting, t]);
-
-  const savePreferences = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSavedMessage(t('common.success'));
-    Alert.alert(t('common.success'), `${settingTitle} updated.`);
-  };
+  const grad = ROLE_GRAD[role?.toLowerCase() || 'chw'] || ROLE_GRAD.chw;
 
   const handleLanguageChange = (lng: string) => {
     i18n.changeLanguage(lng);
-    setSavedMessage(t('common.success'));
+    Alert.alert(t('common.success'), `Language changed to ${lng === 'rw' ? t('common.kinyarwanda') : t('common.english')}`);
   };
 
-  const renderSettingContent = () => {
-    if (activeSetting === 'language') {
-      const options = [
-        { code: 'en', label: t('common.english'), flag: require('../../src/assets/images/england.jpg') },
-        { code: 'rw', label: t('common.kinyarwanda'), flag: require('../../src/assets/images/rwanda.png') },
-      ];
-      return (
-        <View>
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option.code}
-              style={[styles.optionItem, i18n.language === option.code && styles.optionItemActive]}
-              onPress={() => handleLanguageChange(option.code)}
-            >
-              <View style={styles.optionContent}>
-                <Image source={option.flag} style={styles.flag} />
-                <Text style={[styles.optionText, i18n.language === option.code && styles.optionTextActive]}>
-                  {option.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      );
-    }
+  const handleSaveTheme = () => {
+    Alert.alert(t('common.success'), `Theme set to ${theme}`);
+  };
 
-    const themes: Array<'System' | 'Light' | 'Dark'> = ['System', 'Light', 'Dark'];
-    const themeLabels: Record<string, string> = {
-      System: t('preferences.theme_system'),
-      Light: t('preferences.theme_light'),
-      Dark: t('preferences.theme_dark'),
-    };
-    return (
-      <View>
-        {themes.map((option) => (
+  const languages = [
+    { code: 'en', label: t('common.english'),     flag: require('../../src/assets/images/england.jpg') },
+    { code: 'rw', label: t('common.kinyarwanda'), flag: require('../../src/assets/images/rwanda.png') },
+  ];
+
+  const themes: Array<{ key: 'System' | 'Light' | 'Dark'; icon: any; desc: string }> = [
+    { key: 'System', icon: 'phone-portrait-outline', desc: 'Follow device setting' },
+    { key: 'Light',  icon: 'sunny-outline',          desc: 'Always use light mode' },
+    { key: 'Dark',   icon: 'moon-outline',           desc: 'Always use dark mode' },
+  ];
+
+  return (
+    <Container safeArea edges={['top']} style={S.container}>
+      {/* Header */}
+      <LinearGradient colors={grad} style={S.header}>
+        <TouchableOpacity style={S.backCircle} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={18} color="#fff" />
+        </TouchableOpacity>
+        <View style={S.headerCenter}>
+          <Text style={S.headerTitle}>{t('profile.app_preferences')}</Text>
+          <Text style={S.headerSub}>{role.toUpperCase()}</Text>
+        </View>
+      </LinearGradient>
+
+      {/* Tab switcher */}
+      <View style={S.tabs}>
+        {([
+          { key: 'dark_mode', icon: 'moon-outline',  label: t('profile.dark_mode') },
+          { key: 'language',  icon: 'globe-outline', label: t('profile.language') },
+        ] as { key: SettingType; icon: any; label: string }[]).map(tab => (
           <TouchableOpacity
-            key={option}
-            style={[styles.optionItem, theme === option && styles.optionItemActive]}
-            onPress={() => setTheme(option)}
+            key={tab.key}
+            style={[S.tab, activeSetting === tab.key && { borderBottomColor: grad[1], borderBottomWidth: 2 }]}
+            onPress={() => setActiveSetting(tab.key)}
           >
-            <Text style={[styles.optionText, theme === option && styles.optionTextActive]}>{themeLabels[option]}</Text>
+            <Ionicons name={tab.icon} size={16} color={activeSetting === tab.key ? grad[1] : '#94A3B8'} />
+            <Text style={[S.tabText, activeSetting === tab.key && { color: grad[1], fontWeight: '700' }]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
-    );
-  };
 
-  return (
-    <Container safeArea edges={['top']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>{t('common.back')}</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{t('profile.app_preferences')}</Text>
-        </View>
+      <ScrollView contentContainerStyle={S.scroll} showsVerticalScrollIndicator={false}>
 
-        <Text style={styles.subtitle}>{`${roleLabel} view - ${settingTitle}`}</Text>
+        {activeSetting === 'language' ? (
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Select Language</Text>
+            {languages.map(lang => {
+              const active = i18n.language === lang.code;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[S.optionCard, active && { borderColor: grad[1], borderWidth: 2 }]}
+                  onPress={() => handleLanguageChange(lang.code)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={lang.flag} style={S.flag} />
+                  <Text style={[S.optionLabel, active && { color: grad[1], fontWeight: '700' }]}>{lang.label}</Text>
+                  {active && (
+                    <View style={[S.checkCircle, { backgroundColor: grad[1] }]}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Choose Theme</Text>
+            {themes.map(th => {
+              const active = theme === th.key;
+              return (
+                <TouchableOpacity
+                  key={th.key}
+                  style={[S.optionCard, active && { borderColor: grad[1], borderWidth: 2 }]}
+                  onPress={() => setTheme(th.key)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[S.themeIcon, { backgroundColor: active ? grad[1] + '18' : '#F8FAFC' }]}>
+                    <Ionicons name={th.icon} size={20} color={active ? grad[1] : '#94A3B8'} />
+                  </View>
+                  <View style={S.themeInfo}>
+                    <Text style={[S.optionLabel, active && { color: grad[1], fontWeight: '700' }]}>{th.key}</Text>
+                    <Text style={S.optionDesc}>{th.desc}</Text>
+                  </View>
+                  {active && (
+                    <View style={[S.checkCircle, { backgroundColor: grad[1] }]}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
 
-        <View style={styles.tabRow}>
-          {(['dark_mode', 'language'] as SettingType[]).map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={[styles.tabButton, activeSetting === option && styles.tabButtonActive]}
-              onPress={() => {
-                setActiveSetting(option);
-                setSavedMessage('');
-              }}
-            >
-              <Text style={[styles.tabButtonText, activeSetting === option && styles.tabButtonTextActive]}>
-                {option === 'dark_mode' ? t('profile.dark_mode') : t('profile.language')}
-              </Text>
+            <TouchableOpacity style={[S.saveBtn, { backgroundColor: grad[1] }]} onPress={handleSaveTheme}>
+              <Text style={S.saveBtnText}>Save Theme</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+        )}
 
-        <Card variant="elevated" style={styles.card}>
-          <Card.Content>
-            {renderSettingContent()}
-          </Card.Content>
-        </Card>
-
-        {savedMessage ? <Text style={styles.successText}>{savedMessage}</Text> : null}
-
-        <Button variant="primary" size="lg" onPress={savePreferences}>
-          {t('profile.account_settings')}
-        </Button>
-
-        <View style={styles.backAction}>
-          <Button variant="ghost" size="md" onPress={() => router.back()}>
-            {t('common.back')}
-          </Button>
-        </View>
       </ScrollView>
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.md },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-  backBtn: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.md, backgroundColor: colors.backgroundSecondary, ...shadows.sm },
-  backText: { ...typography.captionBold, color: colors.primary },
-  title: { ...typography.h2, color: colors.text },
-  subtitle: { ...typography.caption, color: colors.textSecondary },
-  tabRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  tabButton: { flex: 1, padding: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.backgroundSecondary, alignItems: 'center' },
-  tabButtonActive: { backgroundColor: colors.primary },
-  tabButtonText: { ...typography.captionBold, color: colors.textSecondary },
-  tabButtonTextActive: { color: colors.white },
-  card: { borderRadius: borderRadius.xl, padding: spacing.md },
-  optionItem: { padding: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.borderLight, marginBottom: spacing.sm },
-  optionItemActive: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  optionContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  flag: { width: 30, height: 20, borderRadius: 2 },
-  optionText: { ...typography.body, color: colors.text },
-  optionTextActive: { color: colors.primaryDark, fontWeight: '700' },
-  successText: { ...typography.captionBold, color: colors.success, marginBottom: spacing.sm, textAlign: 'center' },
-  backAction: { marginTop: spacing.sm },
+const S = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  backCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabText: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+  scroll: { padding: 16, paddingBottom: 80 },
+  section: { gap: 12 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  optionCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  flag: { width: 36, height: 24, borderRadius: 4 },
+  themeIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  themeInfo: { flex: 1 },
+  optionLabel: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  optionDesc: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  checkCircle: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
+  saveBtn: { borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 8 },
+  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

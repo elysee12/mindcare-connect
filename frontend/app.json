@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "primaryColor": "#2EB67D",
     "backgroundColor": "#FFFFFF",
-    "icon": "./src/assets/images/icon.png",
+    "icon": "./src/assets/images/IconKitchen-Output/ios/AppIcon~ios-marketing.png",
     "scheme": "mindcare-dashboard",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "foregroundImage": "./src/assets/images/IconKitchen-Output/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
         "backgroundColor": "#2EB67D"
       },
       "package": "com.mindcare.dashboard",
@@ -35,7 +35,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./src/assets/images/favicon.png"
+      "favicon": "./src/assets/images/IconKitchen-Output/web/favicon.ico"
     },
     "plugins": [
       "expo-router",

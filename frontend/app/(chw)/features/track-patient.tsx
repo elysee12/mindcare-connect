@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Container, Card, Input, Button } from '@/components/ui';
-import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Container, Button } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useRouter } from 'expo-router';
 import { formatPatientId } from '@/lib/format';
 import { useTranslation } from 'react-i18next';
 
@@ -13,8 +13,10 @@ export default function TrackPatient() {
   const router = useRouter();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [statusMessage, setStatusMessage] = useState('');
+  const [toast, setToast] = useState('');
   const queryClient = useQueryClient();
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patients'],
@@ -23,107 +25,156 @@ export default function TrackPatient() {
   });
 
   const trackMutation = useMutation({
-    mutationFn: (patientId: number) => api.trackPatient(patientId),
+    mutationFn: (id: number) => api.trackPatient(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['patients']);
-      queryClient.invalidateQueries(['trackedPatients']);
-      setStatusMessage('Patient marked as tracked successfully');
-      setTimeout(() => setStatusMessage(''), 1800);
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['trackedPatients'] });
+      showToast('Patient marked as tracked');
     },
-    onError: () => {
-      setStatusMessage('Failed to track patient. Please try again.');
-      setTimeout(() => setStatusMessage(''), 1800);
-    },
+    onError: () => showToast('Failed to track patient'),
   });
 
-  const matchingPatients = useMemo(() => {
-    if (!query) return patients;
-    const normalized = query.trim().toLowerCase();
-    return patients.filter((patient: any) =>
-      `${patient.fullName}`.toLowerCase().includes(normalized) || 
-      `${patient.id}`.includes(normalized) ||
-      formatPatientId(patient.id).toLowerCase().includes(normalized),
+  const filtered = useMemo(() => {
+    if (!query.trim()) return patients as any[];
+    const q = query.trim().toLowerCase();
+    return (patients as any[]).filter(p =>
+      p.fullName?.toLowerCase().includes(q) ||
+      String(p.id).includes(q) ||
+      formatPatientId(p.id).toLowerCase().includes(q)
     );
   }, [query, patients]);
 
   return (
-    <Container safeArea edges={['top', 'bottom']} style={styles.container}>
-      <View style={styles.headbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.primary} />
-          <Text style={styles.backText}>Back</Text>
+    <Container safeArea edges={['top']} style={S.container}>
+      <LinearGradient colors={['#1E40AF', '#3B82F6']} style={S.header}>
+        <TouchableOpacity style={S.backCircle} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={18} color="#fff" />
         </TouchableOpacity>
+        <View style={S.headerCenter}>
+          <Text style={S.headerTitle}>{t('dashboard.track_patient')}</Text>
+          <Text style={S.headerSub}>Mark patients for cross-CHW tracking</Text>
+        </View>
+      </LinearGradient>
+
+      {/* Search */}
+      <View style={S.searchWrap}>
+        <Ionicons name="search-outline" size={18} color="#94A3B8" />
+        <TextInput
+          style={S.searchInput}
+          placeholder="Search by name or ID…"
+          placeholderTextColor="#94A3B8"
+          value={query}
+          onChangeText={setQuery}
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={() => setQuery('')}>
+            <Ionicons name="close-circle" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Track Patient</Text>
-        <Text style={styles.subtitle}>Mark patient coordination as tracked across CHWs.</Text>
-
-        <Card style={styles.card} variant="elevated">
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>Search by patient name or ID</Text>
-            <Input placeholder="i.e. Jane Doe or 102" value={query} onChangeText={setQuery} />
+      <ScrollView contentContainerStyle={S.scroll} showsVerticalScrollIndicator={false}>
+        {isLoading ? (
+          <View style={S.centered}>
+            <Text style={S.infoText}>Loading patients…</Text>
           </View>
-          {statusMessage ? <Text style={styles.infoText}>{statusMessage}</Text> : null}
-
-          {isLoading ? (
-            <Text style={styles.infoText}>Loading patients...</Text>
-          ) : (
-            matchingPatients.map((patient: any) => (
-              <Card key={patient.id} variant="outlined" style={styles.patientCard}>
-                <View style={styles.patientTopRow}>
-                  <View style={styles.patientTextGroup}>
-                    <Text style={styles.patientId}>{formatPatientId(patient.id)}</Text>
-                    <Text style={styles.patientName}>{patient.fullName}</Text>
-                    <Text style={styles.patientMeta}>{patient.diagnosis || 'No diagnosis yet'} • {patient.status}</Text>
-                  </View>
-                  {patient.photoUrl ? (
-                    <Image source={{ uri: patient.photoUrl }} style={styles.avatar} />
+        ) : filtered.length === 0 ? (
+          <View style={S.empty}>
+            <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={S.emptyIcon}>
+              <Ionicons name="people-outline" size={44} color="#3B82F6" />
+            </LinearGradient>
+            <Text style={S.emptyTitle}>No patients found</Text>
+            <Text style={S.emptySub}>{query ? 'Try a different search' : 'No patients assigned yet'}</Text>
+          </View>
+        ) : (
+          filtered.map((p: any) => (
+            <View key={p.id} style={S.card}>
+              <View style={[S.cardBar, { backgroundColor: p.tracked ? '#2EB67D' : '#3B82F6' }]} />
+              <View style={S.cardBody}>
+                <View style={S.cardTop}>
+                  {p.photoUrl ? (
+                    <Image source={{ uri: p.photoUrl }} style={S.avatar} />
                   ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Ionicons name="person" size={20} color={colors.primaryDark} />
+                    <LinearGradient colors={['#3B82F6CC', '#3B82F6']} style={S.avatar}>
+                      <Text style={S.avatarLetter}>{(p.fullName || '?').charAt(0).toUpperCase()}</Text>
+                    </LinearGradient>
+                  )}
+                  <View style={S.cardMid}>
+                    <Text style={S.cardName}>{p.fullName}</Text>
+                    <Text style={S.cardId}>{formatPatientId(p.id)}</Text>
+                    {p.diagnosis && <Text style={S.cardDiag}>{p.diagnosis}</Text>}
+                  </View>
+                  {p.tracked && (
+                    <View style={S.trackedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#2EB67D" />
+                      <Text style={S.trackedText}>Tracked</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.patientAddress}>
-                  {['province', 'district', 'sector', 'cell', 'village'].map((k) => patient[k]).filter(Boolean).join(', ') || t('notifications.address_not_available')}
-                </Text>
-                <Button
-                  variant={patient.tracked ? 'secondary' : 'primary'}
-                  size="sm"
-                  disabled={patient.tracked}
-                  onPress={() => trackMutation.mutate(patient.id)}
+
+                {(p.province || p.district || p.village) && (
+                  <View style={S.addressRow}>
+                    <Ionicons name="location-outline" size={12} color="#94A3B8" />
+                    <Text style={S.addressText}>
+                      {[p.province, p.district, p.sector, p.cell, p.village].filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[S.trackBtn, p.tracked && S.trackBtnDone]}
+                  onPress={() => !p.tracked && trackMutation.mutate(p.id)}
+                  disabled={p.tracked || trackMutation.isPending}
                 >
-                  {patient.tracked ? 'Already Tracked' : 'Track Patient'}
-                </Button>
-              </Card>
-            ))
-          )}
-        </Card>
+                  <Ionicons name={p.tracked ? 'checkmark-circle' : 'navigate-outline'} size={15} color={p.tracked ? '#2EB67D' : '#fff'} />
+                  <Text style={[S.trackBtnText, p.tracked && { color: '#2EB67D' }]}>
+                    {p.tracked ? 'Already Tracked' : 'Track Patient'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
+
+      {toast ? <View style={S.toast}><Text style={S.toastText}>{toast}</Text></View> : null}
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundSecondary },
-  headbar: { padding: spacing.md, backgroundColor: colors.background, borderBottomColor: colors.border, borderBottomWidth: 1 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  backText: { ...typography.body, color: colors.primary, marginLeft: spacing.xs },
-  content: { padding: spacing.lg, gap: spacing.sm },
-  title: { ...typography.h2, color: colors.primaryDark, marginBottom: spacing.xs },
-  subtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
-  card: { borderRadius: borderRadius.xl, padding: spacing.md, ...shadows.sm },
-  fieldWrapper: { marginBottom: spacing.md },
-  fieldLabel: { ...typography.captionBold, color: colors.textSecondary, marginBottom: spacing.xs },
-  infoText: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm },
-  patientCard: { marginBottom: spacing.sm, borderRadius: borderRadius.xl, padding: spacing.md },
-  patientTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  patientTextGroup: { flex: 1 },
-  patientId: { ...typography.captionBold, color: colors.textSecondary },
-  patientName: { ...typography.bodyBold, color: colors.text, marginTop: spacing.xs },
-  patientMeta: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
-  patientAddress: { ...typography.caption, color: colors.textSecondary, marginVertical: spacing.sm },
-  avatar: { width: 45, height: 45, borderRadius: borderRadius.full, backgroundColor: colors.primaryTint },
-  avatarPlaceholder: { width: 45, height: 45, borderRadius: borderRadius.full, backgroundColor: colors.primaryTint, justifyContent: 'center', alignItems: 'center' },
+const S = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  backCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', marginHorizontal: 16, marginTop: 16, marginBottom: 8, paddingHorizontal: 14, height: 46, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  searchInput: { flex: 1, fontSize: 14, color: '#1E293B' },
+  scroll: { padding: 16, paddingBottom: 80 },
+  centered: { alignItems: 'center', paddingVertical: 40 },
+  infoText: { fontSize: 13, color: '#94A3B8' },
+  empty: { alignItems: 'center', paddingVertical: 80, gap: 16 },
+  emptyIcon: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center' },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#1E293B' },
+  emptySub: { fontSize: 13, color: '#94A3B8' },
+  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 },
+  cardBar: { width: 4 },
+  cardBody: { flex: 1, padding: 14, gap: 8 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  avatarLetter: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  cardMid: { flex: 1 },
+  cardName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  cardId: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+  cardDiag: { fontSize: 11, color: '#64748B', marginTop: 2 },
+  trackedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EAF7F3', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  trackedText: { fontSize: 10, fontWeight: '700', color: '#2EB67D' },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  addressText: { fontSize: 11, color: '#94A3B8', flex: 1 },
+  trackBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#3B82F6', borderRadius: 10, paddingVertical: 10 },
+  trackBtnDone: { backgroundColor: '#EAF7F3' },
+  trackBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  toast: { position: 'absolute', bottom: 32, left: 16, right: 16, backgroundColor: '#1E293B', borderRadius: 14, padding: 14, alignItems: 'center' },
+  toastText: { fontSize: 13, fontWeight: '600', color: '#fff' },
 });

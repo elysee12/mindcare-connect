@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const activeName = user?.fullName || user?.full_name || 'Admin';
+  const activeName = (user as any)?.fullName || user?.full_name || 'Admin';
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const unreadCount = recentAlerts.filter(a => !a.isRead).length;
 
   const clearAllMutation = useMutation({
-    mutationFn: () => api.clearAllNotifications(user?.id),
+    mutationFn: () => api.clearAllNotifications(user?.id as any),
     onSuccess: () => {
       refetchNotifications();
       queryClient.invalidateQueries({ queryKey: ['recentAlerts', user?.id] });
@@ -101,10 +101,10 @@ export default function AdminDashboard() {
 
   // ── Action data ────────────────────────────────────────────────────────────
   const actions = [
-    { title: t('dashboard.user_management'), icon: 'people-outline',           color: colors.primary,     route: '/users' },
-    { title: t('dashboard.assign_roles'),    icon: 'shield-checkmark-outline', color: '#6366F1',          route: '/(admin)/features/assign-roles' },
-    { title: t('dashboard.view_reports'),    icon: 'analytics-outline',        color: colors.success,     route: '/reports' },
-    { title: t('dashboard.system_logs'),     icon: 'server-outline',           color: colors.warning,     route: '/(admin)/features/system-logs' },
+    { title: t('dashboard.user_management'), subtitle: 'Manage all system users',       icon: 'people' as const,           grad: ['#064E3B','#2EB67D'] as [string,string], glow: '#2EB67D20', route: '/users' },
+    { title: t('dashboard.assign_roles'),    subtitle: 'Update user roles & permissions', icon: 'shield-checkmark' as const, grad: ['#3730A3','#6366F1'] as [string,string], glow: '#6366F120', route: '/(admin)/features/assign-roles' },
+    { title: t('dashboard.view_reports'),    subtitle: 'Analytics & report summaries',  icon: 'analytics' as const,        grad: ['#065F46','#10B981'] as [string,string], glow: '#10B98120', route: '/reports' },
+    { title: t('dashboard.system_logs'),     subtitle: 'View system activity logs',     icon: 'server' as const,           grad: ['#78350F','#F59E0B'] as [string,string], glow: '#F59E0B20', route: '/(admin)/features/system-logs' },
   ];
 
   return (
@@ -175,24 +175,49 @@ export default function AdminDashboard() {
 
         {/* ── Management actions ── */}
         <Text style={styles.sectionTitle}>{t('dashboard.management_actions')}</Text>
-        <View style={styles.actionsGrid}>
-          {actions.map((a) => (
-            <TouchableOpacity
-              key={a.title}
-              style={[styles.actionCard, { borderColor: a.color + '30' }]}
-              onPress={() => router.push(a.route as any)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.actionIconWrap, { backgroundColor: a.color + '15' }]}>
-                <Ionicons name={a.icon as any} size={26} color={a.color} />
-              </View>
-              <Text style={styles.actionTitle} numberOfLines={2}>{a.title}</Text>
-              <View style={[styles.actionArrow, { backgroundColor: a.color + '15' }]}>
-                <Ionicons name="arrow-forward" size={14} color={a.color} />
-              </View>
+        {/* Top pair */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12, paddingHorizontal: spacing.lg }}>
+          {actions.slice(0, 2).map(a => (
+            <TouchableOpacity key={a.title} style={styles.halfCard} onPress={() => router.push(a.route as any)} activeOpacity={0.85}>
+              <LinearGradient colors={a.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.halfCardGrad}>
+                <View style={styles.halfDecorCircle} />
+                <View style={styles.halfCardIcon}><Ionicons name={a.icon} size={26} color="#fff" /></View>
+                <Text style={styles.halfCardTitle}>{a.title}</Text>
+                <Text style={styles.halfCardSub} numberOfLines={2}>{a.subtitle}</Text>
+                <View style={styles.halfCardArrow}><Ionicons name="arrow-forward" size={13} color="#fff" /></View>
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </View>
+        {/* Wide card */}
+        <TouchableOpacity style={[styles.wideCard, { marginHorizontal: spacing.lg }]} onPress={() => router.push(actions[2].route as any)} activeOpacity={0.85}>
+          <LinearGradient colors={actions[2].grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.wideCardGrad}>
+            <View style={styles.wideDecorCircle} /><View style={styles.wideDecorCircle2} />
+            <View style={styles.wideLeft}>
+              <View style={styles.wideIconWrap}><Ionicons name={actions[2].icon} size={30} color="#fff" /></View>
+              <View style={styles.wideTextWrap}>
+                <Text style={styles.wideTitle}>{actions[2].title}</Text>
+                <Text style={styles.wideSub}>{actions[2].subtitle}</Text>
+              </View>
+            </View>
+            <View style={styles.wideArrow}><Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" /></View>
+          </LinearGradient>
+        </TouchableOpacity>
+        {/* Outline card */}
+        <TouchableOpacity style={[styles.outlineCard, { marginHorizontal: spacing.lg, marginTop: 12, marginBottom: spacing.xl }]} onPress={() => router.push(actions[3].route as any)} activeOpacity={0.85}>
+          <View style={[styles.outlineIconWrap, { backgroundColor: actions[3].glow }]}>
+            <LinearGradient colors={actions[3].grad} style={styles.outlineIconGrad}>
+              <Ionicons name={actions[3].icon} size={20} color="#fff" />
+            </LinearGradient>
+          </View>
+          <View style={styles.outlineText}>
+            <Text style={styles.outlineTitle}>{actions[3].title}</Text>
+            <Text style={styles.outlineSub}>{actions[3].subtitle}</Text>
+          </View>
+          <View style={[styles.outlineArrowWrap, { backgroundColor: actions[3].glow }]}>
+            <Ionicons name="arrow-forward" size={15} color={actions[3].grad[1]} />
+          </View>
+        </TouchableOpacity>
 
         {/* ── Recent activity ── */}
         <View style={styles.sectionHeader}>
@@ -408,26 +433,36 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: spacing.lg },
   seeAll: { ...typography.captionBold, color: colors.primary },
 
-  // Action cards — 2×2 grid
-  actionsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: spacing.lg, gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  actionCard: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    ...shadows.sm,
-    gap: spacing.xs,
-  },
-  actionIconWrap: {
-    width: 48, height: 48, borderRadius: borderRadius.lg,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
+  // Premium action cards
+  halfCard: { width: (width - spacing.lg * 2 - 12) / 2, borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 6 },
+  halfCardGrad: { padding: 18, minHeight: 160, justifyContent: 'space-between', overflow: 'hidden' },
+  halfDecorCircle: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.08)', top: -30, right: -30 },
+  halfCardIcon: { width: 50, height: 50, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  halfCardTitle: { fontSize: 14, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  halfCardSub: { fontSize: 11, color: 'rgba(255,255,255,0.72)', lineHeight: 15, marginTop: 3 },
+  halfCardArrow: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end', marginTop: 6 },
+  wideCard: { borderRadius: 20, overflow: 'hidden', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 6 },
+  wideCardGrad: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20, overflow: 'hidden' },
+  wideDecorCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.07)', right: 30, top: -50 },
+  wideDecorCircle2: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.05)', right: -20, bottom: -20 },
+  wideLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  wideIconWrap: { width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  wideTextWrap: { flex: 1 },
+  wideTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  wideSub: { fontSize: 11, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
+  wideArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  outlineCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.background, borderRadius: 20, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: colors.border },
+  outlineIconWrap: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  outlineIconGrad: { width: 42, height: 42, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
+  outlineText: { flex: 1 },
+  outlineTitle: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
+  outlineSub: { fontSize: 11, color: colors.textTertiary, marginTop: 3 },
+  outlineArrowWrap: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+
+  // Legacy (kept for safety)
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, gap: spacing.md, marginBottom: spacing.xl },
+  actionCard: { width: CARD_WIDTH, backgroundColor: colors.background, borderRadius: borderRadius.xl, padding: spacing.md, borderWidth: 1, ...shadows.sm, gap: spacing.xs },
+  actionIconWrap: { width: 48, height: 48, borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.xs },
   actionTitle: { ...typography.bodyBold, color: colors.text, lineHeight: 20 },
   actionArrow: {
     width: 28, height: 28, borderRadius: borderRadius.md,

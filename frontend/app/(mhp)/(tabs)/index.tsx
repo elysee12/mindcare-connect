@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Text, Modal, Alert } from 'react-native';
-import { Container, Card, Button } from '@/components/ui';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Text, Modal } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Container } from '@/components/ui';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { colors, spacing, typography, shadows, borderRadius } from '@/constants/design';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { translateNotifications, TranslatedNotification } from '@/lib/notificationTranslation';
 
@@ -18,361 +17,260 @@ export default function MhpDashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const activeName = user?.fullName || user?.full_name || 'User';
-  const activeUserId = user?.id;
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<any>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showReportOptions, setShowReportOptions] = useState(false);
+  const name = user?.fullName || user?.full_name || 'Doctor';
+  const [showNotif, setShowNotif]     = useState(false);
+  const [showDetail, setShowDetail]   = useState(false);
+  const [showReports, setShowReports] = useState(false);
+  const [selNotif, setSelNotif]       = useState<any>(null);
 
   const { data: stats } = useQuery({
     queryKey: ['stats', 'mhp', user?.id],
-    queryFn: async () => api.dashboard('mhp', user?.id),
-    staleTime: 1000 * 30,
-    enabled: !!user?.id,
+    queryFn: () => api.dashboard('mhp', user?.id),
+    staleTime: 1000 * 30, enabled: !!user?.id,
   });
-
-  const { data: rawAlerts, refetch: refetchNotifications } = useQuery<any[]>({
+  const { data: rawAlerts = [], refetch: refetchNotif } = useQuery<any[]>({
     queryKey: ['recentAlerts', user?.id],
-    queryFn: async () => api.notifications(user?.id),
-    staleTime: 1000 * 30,
-    enabled: !!user?.id,
+    queryFn: () => api.notifications(user?.id),
+    staleTime: 1000 * 30, enabled: !!user?.id,
   });
+  const alerts: TranslatedNotification[] = translateNotifications(rawAlerts, t);
 
-  const recentAlerts: TranslatedNotification[] = rawAlerts
-    ? translateNotifications(rawAlerts, t)
-    : [];
-
-  const clearAllMutation = useMutation({
+  const clearAll = useMutation({
     mutationFn: () => api.clearAllNotifications(user?.id),
-    onSuccess: () => {
-      refetchNotifications();
-      queryClient.invalidateQueries({ queryKey: ['recentAlerts', user?.id] });
-    },
-    onError: (error: any) => {
-      Alert.alert(t('common.error'), error.message);
-    },
+    onSuccess: () => { refetchNotif(); queryClient.invalidateQueries({ queryKey: ['recentAlerts', user?.id] }); },
   });
-
-  const deleteNotificationMutation = useMutation({
+  const delNotif = useMutation({
     mutationFn: (id: number) => api.deleteNotification(id),
-    onSuccess: () => {
-      refetchNotifications();
-      queryClient.invalidateQueries({ queryKey: ['recentAlerts', user?.id] });
-    },
-    onError: (error: any) => {
-      Alert.alert(t('common.error'), error.message);
-    },
+    onSuccess: () => { refetchNotif(); queryClient.invalidateQueries({ queryKey: ['recentAlerts', user?.id] }); },
   });
 
-  const handleClearAll = () => {
-    Alert.alert(
-      t('notifications.clear_all_title') || 'Clear All',
-      t('notifications.clear_all_confirm') || 'Are you sure you want to clear all notifications?',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => clearAllMutation.mutate() },
-      ]
-    );
-  };
-
-  const handleNotificationPress = async (alert: any) => {
-    if (alert.type === 'PATIENT_FOUND') {
-      try {
-        const fullAlert = await api.notificationById(alert.id);
-        setSelectedNotification(fullAlert);
-        setShowDetailModal(true);
-      } catch (error) {
-        console.error('Failed to fetch notification details:', error);
-        setSelectedNotification(alert);
-        setShowDetailModal(true);
-      }
+  const openNotif = async (a: any) => {
+    if (a.type === 'PATIENT_FOUND') {
+      try { setSelNotif(await api.notificationById(a.id)); } catch { setSelNotif(a); }
+      setShowDetail(true);
     }
   };
 
+  const actions = [
+    { title: t('dashboard.patient_management'),     subtitle: 'Manage your assigned patients',    icon: 'people' as const,        grad: ['#10B981', '#059669'] as [string,string], glow: '#10B98120', route: '/(mhp)/(tabs)/patients' },
+    { title: t('dashboard.appointment_management'), subtitle: 'Schedule & track appointments',    icon: 'calendar' as const,      grad: ['#0EA5E9', '#0284C7'] as [string,string], glow: '#0EA5E920', route: '/(mhp)/features/appointment-management' },
+    { title: t('dashboard.treatment_management'),   subtitle: 'Record treatment changes',         icon: 'medical' as const,       grad: ['#8B5CF6', '#7C3AED'] as [string,string], glow: '#8B5CF620', route: '/(mhp)/features/treatment-management' },
+    { title: t('dashboard.view_reports'),           subtitle: 'View CHW & follow-up reports',    icon: 'document-text' as const, grad: ['#F59E0B', '#D97706'] as [string,string], glow: '#F59E0B20', route: null },
+  ];
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
   return (
-    <Container safeArea edges={['top']} style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.welcomeText}>{t('dashboard.welcome_back')}</Text>
-            <Text style={styles.nameText}>{activeName}</Text>
-            <Text style={styles.roleText}>{user?.workplace || 'Mental Health Professional'}</Text>
+    <Container safeArea edges={['top']} style={S.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={S.scroll}>
+
+        {/* ── Hero ── */}
+        <LinearGradient colors={['#064E3B', '#065F46', '#2EB67D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={S.hero}>
+          <View style={S.heroTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={S.heroGreet}>{greeting} 👋</Text>
+              <Text style={S.heroName}>{name}</Text>
+              <View style={S.roleBadge}>
+                <View style={S.roleDot} />
+                <Text style={S.roleText}>{user?.workplace || 'Mental Health Professional'}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={S.notifBtn} onPress={() => setShowNotif(true)}>
+              <Ionicons name="notifications-outline" size={22} color="#fff" />
+              {alerts.length > 0 && (
+                <View style={S.badge}><Text style={S.badgeText}>{alerts.length > 9 ? '9+' : alerts.length}</Text></View>
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={styles.notificationBtn}
-            onPress={() => setShowNotifications(true)}
-          >
-            <Ionicons name="notifications-outline" size={24} color={colors.text} />
-            {recentAlerts && recentAlerts.length > 0 && (
-              <View style={styles.notificationBadge} />
-            )}
+          <View style={S.statsRow}>
+            <StatCard icon="people-outline"   label={t('dashboard.patients')}           value={stats?.totalPatients || 0}     color="#6EE7B7" />
+            <StatCard icon="document-text-outline" label={t('dashboard.total_followups')} value={stats?.totalFollowups || 0}  color="#93C5FD" />
+            <StatCard icon="calendar-outline" label={t('dashboard.total_appointments')} value={stats?.totalAppointments || 0} color="#FCD34D" />
+          </View>
+        </LinearGradient>
+
+        {/* ── Quick Actions ── */}
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <Text style={S.sectionTitle}>{t('dashboard.quick_actions')}</Text>
+            <Text style={S.sectionSub}>What would you like to do?</Text>
+          </View>
+          {/* Top pair */}
+          <View style={S.pairRow}>
+            {actions.slice(0, 2).map(a => (
+              <TouchableOpacity key={a.title} style={S.halfCard}
+                onPress={() => a.route ? router.push(a.route as any) : setShowReports(true)} activeOpacity={0.85}>
+                <LinearGradient colors={a.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={S.halfCardGrad}>
+                  <View style={S.decorCircle} />
+                  <View style={S.halfCardIcon}><Ionicons name={a.icon} size={28} color="#fff" /></View>
+                  <Text style={S.halfCardTitle}>{a.title}</Text>
+                  <Text style={S.halfCardSub} numberOfLines={2}>{a.subtitle}</Text>
+                  <View style={S.halfCardArrow}><Ionicons name="arrow-forward" size={14} color="#fff" /></View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* Wide card */}
+          <TouchableOpacity style={S.wideCard} onPress={() => router.push(actions[2].route as any)} activeOpacity={0.85}>
+            <LinearGradient colors={actions[2].grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={S.wideCardGrad}>
+              <View style={S.wideDecorCircle} /><View style={S.wideDecorCircle2} />
+              <View style={S.wideLeft}>
+                <View style={S.wideIconWrap}><Ionicons name={actions[2].icon} size={32} color="#fff" /></View>
+                <View style={S.wideTextWrap}>
+                  <Text style={S.wideTitle}>{actions[2].title}</Text>
+                  <Text style={S.wideSub}>{actions[2].subtitle}</Text>
+                </View>
+              </View>
+              <View style={S.wideArrow}><Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" /></View>
+            </LinearGradient>
+          </TouchableOpacity>
+          {/* Outline card */}
+          <TouchableOpacity style={S.outlineCard} onPress={() => setShowReports(true)} activeOpacity={0.85}>
+            <View style={[S.outlineIconWrap, { backgroundColor: actions[3].glow }]}>
+              <LinearGradient colors={actions[3].grad} style={S.outlineIconGrad}>
+                <Ionicons name={actions[3].icon} size={22} color="#fff" />
+              </LinearGradient>
+            </View>
+            <View style={S.outlineText}>
+              <Text style={S.outlineTitle}>{actions[3].title}</Text>
+              <Text style={S.outlineSub}>{actions[3].subtitle}</Text>
+            </View>
+            <View style={[S.outlineArrowWrap, { backgroundColor: actions[3].glow }]}>
+              <Ionicons name="arrow-forward" size={16} color={actions[3].grad[0]} />
+            </View>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.dashboard}>
-          <LinearGradient
-            colors={[colors.primary, colors.primaryDark]}
-            style={styles.heroCard}
-          >
-            <Text style={styles.heroTitle}>{t('dashboard.clinical_statistics')}</Text>
-            <View style={styles.heroStatsRow}>
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{stats?.totalPatients || 0}</Text>
-                <Text style={styles.heroStatLabel}>{t('dashboard.patients')}</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{stats?.totalFollowups || 0}</Text>
-                <Text style={styles.heroStatLabel}>{t('dashboard.total_followups')}</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{stats?.totalAppointments || 0}</Text>
-                <Text style={styles.heroStatLabel}>{t('dashboard.total_appointments')}</Text>
-              </View>
+        {/* ── Recent Activity ── */}
+        <View style={S.section}>
+          <View style={S.sectionRow}>
+            <View>
+              <Text style={S.sectionTitle}>{t('dashboard.recent_activity')}</Text>
+              <Text style={S.sectionSub}>Latest notifications</Text>
             </View>
-            <View style={styles.heroActions}>
-              <View style={styles.heroActionButtonWrapper}>
-                <Button 
-                  title={t('dashboard.view_cases')} 
-                  onPress={() => router.push('/(mhp)/(tabs)/patients')}
-                  variant="primary"
-                  size="small"
-                />
-              </View>
-            </View>
-          </LinearGradient>
-
-          <Text style={styles.sectionTitle}>{t('dashboard.quick_actions')}</Text>
-          <View style={styles.actionsGrid}>
-            <ActionCard title={t('dashboard.patient_management')} icon="people-outline" color={colors.primary} route="/(mhp)/(tabs)/patients" />
-            <ActionCard title={t('dashboard.appointment_management')} icon="calendar-outline" color={colors.primaryDark} route="/(mhp)/features/appointment-management" />
-            <ActionCard title={t('dashboard.treatment_management')} icon="medical-outline" color={colors.primaryLight} route="/(mhp)/features/treatment-management" />
-            <TouchableOpacity 
-              style={[styles.actionCard, { borderColor: colors.success + '40', borderWidth: 1 }]}
-              onPress={() => setShowReportOptions(true)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.actionIconContainer, { backgroundColor: colors.success + '18' }]}> 
-                <Ionicons name="document-text-outline" size={28} color={colors.success} />
-              </View>
-              <Text style={[styles.actionTitle, { color: colors.primaryDark }]}>{t('dashboard.view_reports')}</Text>
-              <View style={[styles.actionChevron, { backgroundColor: colors.primaryTint }]}> 
-                <Ionicons name="chevron-forward-outline" size={16} color={colors.primary} />
-              </View>
-            </TouchableOpacity>
+            {alerts.length > 0 && (
+              <TouchableOpacity style={S.seeAllBtn} onPress={() => setShowNotif(true)}>
+                <Text style={S.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={14} color="#2EB67D" />
+              </TouchableOpacity>
+            )}
           </View>
-
-          <Text style={styles.sectionTitle}>{t('dashboard.recent_activity')}</Text>
-          {recentAlerts?.map((alert) => (
-            <TouchableOpacity 
-              key={alert.id} 
-              onPress={() => handleNotificationPress(alert)}
-              activeOpacity={0.7}
-            >
-              <Card style={styles.activityCard}>
-                <View style={styles.activityContent}>
-                  <View style={[styles.activityIcon, { backgroundColor: colors.primaryTint }]}>
-                    <Ionicons name="notifications" size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.activityText}>
-                    <Text style={styles.activityTitle}>{alert.translatedTitle}</Text>
-                    <Text style={styles.activityMessage} numberOfLines={1}>{alert.translatedMessage}</Text>
-                  </View>
+          {alerts.length === 0 ? (
+            <View style={S.emptyWrap}>
+              <View style={S.emptyIconWrap}><Ionicons name="notifications-off-outline" size={32} color="#94A3B8" /></View>
+              <Text style={S.emptyTitle}>{t('dashboard.no_notifications')}</Text>
+              <Text style={S.emptyText}>You're all caught up!</Text>
+            </View>
+          ) : (
+            alerts.slice(0, 4).map(a => (
+              <TouchableOpacity key={a.id} style={S.actRow} onPress={() => openNotif(a)} activeOpacity={0.7}>
+                <View style={S.actIconWrap}><Ionicons name="notifications" size={16} color="#2EB67D" /></View>
+                <View style={S.actBody}>
+                  <Text style={S.actTitle} numberOfLines={1}>{a.translatedTitle}</Text>
+                  <Text style={S.actMsg} numberOfLines={1}>{a.translatedMessage}</Text>
                 </View>
-              </Card>
-            </TouchableOpacity>
-          ))}
+                <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))
+          )}
         </View>
+
       </ScrollView>
 
-      <Modal
-        visible={showNotifications}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowNotifications(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('dashboard.notifications')}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                {recentAlerts && recentAlerts.length > 0 && (
-                  <TouchableOpacity onPress={handleClearAll}>
-                    <Ionicons name="trash-outline" size={22} color={colors.error} />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={() => setShowNotifications(false)}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
+      {/* ── Notifications sheet ── */}
+      <Modal visible={showNotif} animationType="slide" transparent onRequestClose={() => setShowNotif(false)}>
+        <View style={S.sheetOverlay}>
+          <View style={S.sheet}>
+            <View style={S.sheetHandle} />
+            <View style={S.sheetHeader}>
+              <Text style={S.sheetTitle}>{t('dashboard.notifications')}</Text>
+              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                {alerts.length > 0 && <TouchableOpacity onPress={() => clearAll.mutate()}><Ionicons name="trash-outline" size={20} color="#EF4444" /></TouchableOpacity>}
+                <TouchableOpacity onPress={() => setShowNotif(false)}><Ionicons name="close" size={22} color="#64748B" /></TouchableOpacity>
               </View>
             </View>
-            
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalList}>
-              {recentAlerts && recentAlerts.length > 0 ? (
-                recentAlerts.map((alert) => (
-                  <View key={alert.id} style={styles.notificationWrapper}>
-                    <TouchableOpacity 
-                      style={{ flex: 1 }}
-                      onPress={() => {
-                        setShowNotifications(false);
-                        handleNotificationPress(alert);
-                      }}
-                    >
-                      <Card style={styles.modalActivityCard}>
-                        <View style={styles.activityContent}>
-                          <View style={[styles.activityIcon, { backgroundColor: colors.primaryTint }]}>
-                            <Ionicons name="notifications" size={20} color={colors.primary} />
-                          </View>
-                          <View style={styles.activityText}>
-                            <Text style={styles.activityTitle}>{alert.translatedTitle}</Text>
-                            <Text style={styles.activityMessage}>{alert.translatedMessage}</Text>
-                          </View>
-                        </View>
-                      </Card>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.dismissBtn} 
-                      onPress={() => deleteNotificationMutation.mutate(alert.id)}
-                    >
-                      <Ionicons name="close-circle-outline" size={20} color={colors.textTertiary} />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-                  <Text style={styles.emptyText}>{t('dashboard.no_notifications')}</Text>
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+              {alerts.length === 0 ? (
+                <View style={S.emptyWrap}><Ionicons name="notifications-off-outline" size={48} color="#E2E8F0" /><Text style={S.emptyText}>{t('dashboard.no_notifications')}</Text></View>
+              ) : alerts.map(a => (
+                <View key={a.id} style={S.notifRow}>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => { setShowNotif(false); openNotif(a); }}>
+                    <View style={S.notifCard}>
+                      <View style={S.notifIcon}><Ionicons name="notifications" size={16} color="#2EB67D" /></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={S.notifTitle}>{a.translatedTitle}</Text>
+                        <Text style={S.notifMsg} numberOfLines={2}>{a.translatedMessage}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => delNotif.mutate(a.id)} style={{ padding: 4 }}>
+                    <Ionicons name="close-circle-outline" size={20} color="#CBD5E1" />
+                  </TouchableOpacity>
                 </View>
-              )}
+              ))}
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={showDetailModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowDetailModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: 'auto', maxHeight: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('notifications.patient_located_details')}</Text>
-              <TouchableOpacity onPress={() => setShowDetailModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+      {/* ── Patient found detail ── */}
+      <Modal visible={showDetail} transparent animationType="fade" onRequestClose={() => setShowDetail(false)}>
+        <View style={S.overlay}>
+          <View style={S.detailModal}>
+            <View style={S.sheetHeader}>
+              <Text style={S.sheetTitle}>{t('notifications.patient_located_details')}</Text>
+              <TouchableOpacity onPress={() => setShowDetail(false)}><Ionicons name="close" size={22} color="#64748B" /></TouchableOpacity>
             </View>
-            <View style={styles.detailBody}>
-              <Text style={styles.detailMessage}>{selectedNotification?.message}</Text>
-              <View style={styles.divider} />
-              
-              <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={20} color={colors.primary} />
+            <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
+              <Text style={{ fontSize: 15, color: '#1E293B', lineHeight: 22 }}>{selNotif?.message}</Text>
+              <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Ionicons name="time-outline" size={18} color="#2EB67D" />
                 <View>
-                  <Text style={styles.detailLabel}>{t('notifications.time_found')}</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedNotification?.createdAt ? new Date(selectedNotification.createdAt).toLocaleString() : t('common.na')}
-                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' }}>{t('notifications.time_found')}</Text>
+                  <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif?.createdAt ? new Date(selNotif.createdAt).toLocaleString() : t('common.na')}</Text>
                 </View>
               </View>
-
-              {selectedNotification?.user && (
+              {selNotif?.user && (
                 <>
-                  <View style={styles.divider} />
-                  <Text style={styles.finderHeader}>{t('notifications.finder_contact')}</Text>
-                  
-                  <View style={styles.contactRow}>
-                    <Ionicons name="call-outline" size={18} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.phone || t('common.na')}</Text>
-                  </View>
-                  
-                  <View style={styles.contactRow}>
-                    <Ionicons name="mail-outline" size={18} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.email || t('common.na')}</Text>
-                  </View>
-
-                  <View style={styles.divider} />
-                  <Text style={styles.finderHeader}>{t('notifications.finder_address')}</Text>
-                  <View style={styles.addressBox}>
-                    <Ionicons name="home-outline" size={18} color={colors.primary} />
-                    <Text style={styles.addressText}>
-                      {[
-                        selectedNotification.user.province,
-                        selectedNotification.user.district,
-                        selectedNotification.user.sector,
-                        selectedNotification.user.cell,
-                        selectedNotification.user.village
-                      ].filter(Boolean).join(', ') || t('notifications.address_not_available')}
-                    </Text>
-                  </View>
+                  <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="call-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.phone || t('common.na')}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="mail-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.email || t('common.na')}</Text></View>
                 </>
               )}
-
-              <View style={styles.buttonContainer}>
-                <Button 
-                  variant="primary" 
-                  fullWidth 
-                  onPress={() => setShowDetailModal(false)}
-                >
-                  {t('notifications.close')}
-                </Button>
-              </View>
-            </View>
+              <TouchableOpacity style={S.closeBtn} onPress={() => setShowDetail(false)}>
+                <Text style={S.closeBtnText}>{t('notifications.close')}</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={showReportOptions}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowReportOptions(false)}
-      >
-        <View style={styles.modalOverlayCenter}>
-          <View style={styles.optionModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('dashboard.select_report_type')}</Text>
-              <TouchableOpacity onPress={() => setShowReportOptions(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+      {/* ── Report type picker ── */}
+      <Modal visible={showReports} transparent animationType="fade" onRequestClose={() => setShowReports(false)}>
+        <View style={S.overlay}>
+          <View style={S.picker}>
+            <View style={S.pickerHeader}>
+              <Text style={S.pickerTitle}>{t('dashboard.select_report_type')}</Text>
+              <TouchableOpacity onPress={() => setShowReports(false)}><Ionicons name="close" size={22} color="#64748B" /></TouchableOpacity>
             </View>
-
-            <View style={styles.optionList}>
-              <TouchableOpacity 
-                style={styles.optionItem} 
-                onPress={() => {
-                  setShowReportOptions(false);
-                  router.push('/(mhp)/features/view-reports?type=regular');
-                }}
-              >
-                <View style={[styles.optionIcon, { backgroundColor: colors.primaryTint }]}>
-                  <Ionicons name="document-text" size={24} color={colors.primary} />
+            {[
+              { label: t('dashboard.regular_report'),  desc: t('dashboard.view_chw_submissions'),  icon: 'document-text' as const, color: '#2EB67D', type: 'regular' },
+              { label: t('dashboard.followup_report'), desc: t('dashboard.view_followup_history'), icon: 'calendar' as const,       color: '#3B82F6', type: 'followup' },
+            ].map(opt => (
+              <TouchableOpacity key={opt.type} style={S.pickerOpt}
+                onPress={() => { setShowReports(false); router.push(`/(mhp)/features/view-reports?type=${opt.type}` as any); }}>
+                <View style={[S.pickerIcon, { backgroundColor: opt.color + '18' }]}>
+                  <Ionicons name={opt.icon} size={22} color={opt.color} />
                 </View>
-                <View>
-                  <Text style={styles.optionLabel}>{t('dashboard.regular_report')}</Text>
-                  <Text style={styles.optionDesc}>{t('dashboard.view_chw_submissions')}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={S.pickerLabel}>{opt.label}</Text>
+                  <Text style={S.pickerDesc}>{opt.desc}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
               </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.optionItem} 
-                onPress={() => {
-                  setShowReportOptions(false);
-                  router.push('/(mhp)/features/view-reports?type=followup');
-                }}
-              >
-                <View style={[styles.optionIcon, { backgroundColor: colors.successTint }]}>
-                  <Ionicons name="calendar" size={24} color={colors.success} />
-                </View>
-                <View>
-                  <Text style={styles.optionLabel}>{t('dashboard.followup_report')}</Text>
-                  <Text style={styles.optionDesc}>{t('dashboard.view_followup_history')}</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            ))}
           </View>
         </View>
       </Modal>
@@ -380,345 +278,106 @@ export default function MhpDashboard() {
   );
 }
 
-function ActionCard({ title, icon, color, route }: { title: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string }) {
-  const router = useRouter();
-  const bgColor = color + '18';
-  const borderColor = color + '40';
-
+function StatCard({ icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
   return (
-    <TouchableOpacity
-      style={[styles.actionCard, { borderColor, borderWidth: 1 }]}
-      onPress={() => router.push(route as any)}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.actionIconContainer, { backgroundColor: bgColor }]}> 
-        <Ionicons name={icon} size={28} color={color} />
+    <View style={S.statCard}>
+      <View style={[S.statIconWrap, { backgroundColor: color + '25' }]}>
+        <Ionicons name={icon} size={15} color={color} />
       </View>
-      <Text style={[styles.actionTitle, { color: colors.primaryDark }]}>{title}</Text>
-      <View style={[styles.actionChevron, { backgroundColor: colors.primaryTint }]}> 
-        <Ionicons name="chevron-forward-outline" size={16} color={colors.primary} />
-      </View>
-    </TouchableOpacity>
+      <Text style={S.statVal}>{value}</Text>
+      <Text style={S.statLbl}>{label}</Text>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.backgroundSecondary,
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  welcomeText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  nameText: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  roleText: {
-    ...typography.captionBold,
-    color: colors.primary,
-    marginTop: -spacing.xs,
-  },
-  notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.sm,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.error,
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  dashboard: {
-    gap: spacing.lg,
-  },
-  heroCard: {
-    padding: spacing.xl,
-    borderRadius: borderRadius.xxl,
-    ...shadows.md,
-  },
-  heroTitle: {
-    ...typography.h3,
-    color: colors.white,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  heroStatValue: {
-    ...typography.h1,
-    color: colors.white,
-  },
-  heroStatLabel: {
-    ...typography.tiny,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  heroActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xl,
-  },
-  heroActionButtonWrapper: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginTop: spacing.sm,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  actionCard: {
-    width: (width - spacing.lg * 2 - spacing.md) / 2,
-    backgroundColor: colors.background,
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.primaryTint,
-    ...shadows.md,
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  actionTitle: {
-    ...typography.captionBold,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  actionChevron: {
-    width: 28,
-    height: 28,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityCard: {
-    marginBottom: spacing.xs,
-  },
-  activityContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityText: {
-    flex: 1,
-  },
-  activityTitle: {
-    ...typography.bodyBold,
-    color: colors.text,
-  },
-  activityMessage: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.backgroundSecondary,
-    borderTopLeftRadius: borderRadius.xxl,
-    borderTopRightRadius: borderRadius.xxl,
-    height: '80%',
-    padding: spacing.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  modalList: {
-    paddingBottom: spacing.xl,
-  },
-  modalActivityCard: {
-    marginBottom: spacing.sm,
-    backgroundColor: colors.background,
-    flex: 1,
-  },
-  notificationWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  dismissBtn: {
-    padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center', 
-  },
-  detailBody: {
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  detailMessage: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.xs,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  detailLabel: {
-    ...typography.tinyBold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-  },
-  detailValue: {
-    ...typography.body,
-    color: colors.text,
-  },
-  finderHeader: {
-    ...typography.tinyBold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: 4,
-  },
-  contactText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  addressBox: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  addressText: {
-    ...typography.caption,
-    color: colors.text,
-    flex: 1,
-    lineHeight: 18,
-  },
-  buttonContainer: {
-    marginTop: spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxxl,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textTertiary,
-    marginTop: spacing.md,
-  },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  optionModalContent: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.lg,
-    ...shadows.lg,
-  },
-  optionList: {
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center', 
-    padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.xl,
-    gap: spacing.md,
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center', 
-    alignItems: 'center',
-  },
-  optionLabel: {
-    ...typography.bodyBold,
-    color: colors.text,
-  },
-  optionDesc: {
-    ...typography.tiny,
-    color: colors.textSecondary,
-  },
+const S = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F0F4FF' },
+  scroll: { paddingBottom: 100 },
+
+  // Hero
+  hero: { paddingTop: 8, paddingBottom: 28, paddingHorizontal: 20 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  heroGreet: { fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 4 },
+  heroName: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  roleDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#6EE7B7' },
+  roleText: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+  notifBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  badge: { position: 'absolute', top: 6, right: 6, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 1.5, borderColor: '#064E3B' },
+  badgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  statsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  statCard: { flex: 1, alignItems: 'center', gap: 5 },
+  statIconWrap: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  statVal: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  statLbl: { fontSize: 10, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 13 },
+
+  // Section
+  section: { marginHorizontal: 16, marginTop: 24 },
+  sectionHeader: { marginBottom: 16 },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', letterSpacing: -0.3 },
+  sectionSub: { fontSize: 12, color: '#94A3B8', marginTop: 3 },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  seeAllText: { fontSize: 12, fontWeight: '700', color: '#2EB67D' },
+
+  // Premium action cards
+  pairRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  halfCard: { width: (width - 32 - 12) / 2, borderRadius: 20, overflow: 'hidden', shadowColor: '#059669', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 6 },
+  halfCardGrad: { padding: 18, minHeight: 165, justifyContent: 'space-between', overflow: 'hidden' },
+  decorCircle: { position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(255,255,255,0.08)', top: -35, right: -35 },
+  halfCardIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  halfCardTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  halfCardSub: { fontSize: 11, color: 'rgba(255,255,255,0.72)', lineHeight: 15, marginTop: 3 },
+  halfCardArrow: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end', marginTop: 8 },
+  wideCard: { borderRadius: 20, overflow: 'hidden', marginBottom: 12, shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 6 },
+  wideCardGrad: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 22, overflow: 'hidden' },
+  wideDecorCircle: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.07)', right: 30, top: -50 },
+  wideDecorCircle2: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.05)', right: -20, bottom: -20 },
+  wideLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  wideIconWrap: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  wideTextWrap: { flex: 1 },
+  wideTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  wideSub: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
+  wideArrow: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  outlineCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: '#F1F5F9' },
+  outlineIconWrap: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  outlineIconGrad: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  outlineText: { flex: 1 },
+  outlineTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  outlineSub: { fontSize: 12, color: '#94A3B8', marginTop: 3 },
+  outlineArrowWrap: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+
+  // Activity
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
+  actIconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#ECFDF5', justifyContent: 'center', alignItems: 'center' },
+  actBody: { flex: 1 },
+  actTitle: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  actMsg: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  emptyWrap: { alignItems: 'center', paddingVertical: 32, gap: 10 },
+  emptyIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  emptyText: { fontSize: 13, color: '#94A3B8' },
+
+  // Modals
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '80%' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginTop: 12 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  notifRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  notifCard: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12 },
+  notifIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#ECFDF5', justifyContent: 'center', alignItems: 'center' },
+  notifTitle: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  notifMsg: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  picker: { backgroundColor: '#fff', borderRadius: 24, padding: 20, gap: 4 },
+  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  pickerTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
+  pickerOpt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, backgroundColor: '#F8FAFC', borderRadius: 16, marginBottom: 8 },
+  pickerIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  pickerLabel: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  pickerDesc: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  detailModal: { backgroundColor: '#fff', borderRadius: 24, maxHeight: '80%', overflow: 'hidden' },
+  closeBtn: { backgroundColor: '#2EB67D', borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 8 },
+  closeBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

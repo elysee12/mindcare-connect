@@ -1,109 +1,99 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text } from 'react-native';
-import { Container, Card, Button } from '@/components/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Container } from '@/components/ui';
 import { colors, spacing, typography, borderRadius } from '@/constants/design';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { translateNotifications, TranslatedNotification } from '@/lib/notificationTranslation';
 
+function getMeta(type: string): { icon: any; color: string; bg: string } {
+  const t = (type||'').toLowerCase();
+  if (t.includes('appointment')||t.includes('reminder')) return { icon:'calendar',      color:'#3B82F6', bg:'#DBEAFE' };
+  if (t.includes('found'))                                return { icon:'location',      color:'#2EB67D', bg:'#EAF7F3' };
+  if (t.includes('treatment'))                            return { icon:'medkit',        color:'#F59E0B', bg:'#FEF3C7' };
+  if (t.includes('followup'))                             return { icon:'document-text', color:'#2EB67D', bg:'#EAF7F3' };
+  if (t.includes('report'))                               return { icon:'analytics',     color:'#EC4899', bg:'#FCE7F3' };
+  return { icon:'notifications', color:'#3B82F6', bg:'#DBEAFE' };
+}
+
 export default function AlertsScreen() {
-  const { role } = useLocalSearchParams<{ role: string }>();
   const { user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const { data: rawAlerts, refetch } = useQuery({
+  const { data: raw = [], refetch } = useQuery({
     queryKey: ['notifications', user?.id],
-    queryFn: async () => api.notifications(user?.id),
-    staleTime: 1000 * 30,
+    queryFn: () => api.notifications(user?.id),
+    staleTime: 1000*30,
   });
+  const alerts: TranslatedNotification[] = translateNotifications(raw, t);
 
-  const alerts: TranslatedNotification[] = rawAlerts
-    ? translateNotifications(rawAlerts, t)
-    : [];
-
-  const dismissMutation = useMutation({
+  const dismiss = useMutation({
     mutationFn: (id: number) => api.deleteNotification(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
   });
 
-  const getAlertIcon = (type: string) => {
-    const lower = type?.toLowerCase() ?? '';
-    if (lower.includes('appointment') || lower.includes('reminder')) return 'calendar';
-    if (lower.includes('found')) return 'location';
-    if (lower.includes('treatment')) return 'medkit';
-    if (lower.includes('followup')) return 'document-text';
-    if (lower.includes('report')) return 'analytics';
-    if (lower.includes('user')) return 'person';
-    return 'notifications';
-  };
-
-  const getAlertColor = (type: string) => {
-    const lower = type?.toLowerCase() ?? '';
-    if (lower.includes('appointment') || lower.includes('reminder')) return colors.info;
-    if (lower.includes('found')) return colors.success;
-    if (lower.includes('treatment')) return colors.primary;
-    if (lower.includes('followup')) return colors.primaryLight;
-    if (lower.includes('report')) return colors.warning;
-    if (lower.includes('user')) return colors.primaryDark;
-    return colors.textTertiary;
-  };
-
-  const renderAlertItem = ({ item }: { item: TranslatedNotification }) => (
-    <Card variant="elevated" style={styles.alertCard}>
-      <Card.Content style={styles.alertContent}>
-        <View style={[styles.iconContainer, { backgroundColor: getAlertColor(item.type) + '15' }]}>
-          <Ionicons name={getAlertIcon(item.type)} size={24} color={getAlertColor(item.type)} />
+  const renderItem = ({ item }: { item: TranslatedNotification }) => {
+    const meta = getMeta(item.type);
+    return (
+      <View style={S.card}>
+        <View style={[S.iconWrap, { backgroundColor: meta.bg }]}>
+          <Ionicons name={meta.icon} size={22} color={meta.color} />
         </View>
-        <View style={styles.alertText}>
-          <View style={styles.alertHeader}>
-            <Text style={styles.alertTitle}>{item.translatedTitle}</Text>
-            <Text style={styles.alertTime}>{t('notifications.just_now')}</Text>
+        <View style={S.cardBody}>
+          <View style={S.cardTop}>
+            <Text style={S.cardTitle} numberOfLines={1}>{item.translatedTitle}</Text>
+            <Text style={S.cardTime}>{t('notifications.just_now')}</Text>
           </View>
-          <Text style={styles.alertMessage}>{item.translatedMessage}</Text>
-          <View style={styles.alertFooter}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={() => {}}
-              textStyle={{ color: colors.primary, ...typography.captionBold }}
-            >
-              {t('notifications.take_action')}
-            </Button>
-            <TouchableOpacity onPress={() => dismissMutation.mutate(item.id)}>
-              <Text style={styles.dismissText}>{t('notifications.dismiss')}</Text>
+          <Text style={S.cardMsg}>{item.translatedMessage}</Text>
+          <View style={S.cardActions}>
+            <TouchableOpacity style={[S.actionBtn, { backgroundColor: meta.bg }]}>
+              <Text style={[S.actionText, { color: meta.color }]}>{t('notifications.take_action')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => dismiss.mutate(item.id)}>
+              <Text style={S.dismissText}>{t('notifications.dismiss')}</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Card.Content>
-    </Card>
-  );
+      </View>
+    );
+  };
 
   return (
-    <Container safeArea edges={['top']} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('notifications.system_alerts')}</Text>
-        <TouchableOpacity style={styles.markAllBtn} onPress={() => refetch()}>
-          <Text style={styles.markAllText}>{t('notifications.mark_all_read')}</Text>
+    <Container safeArea edges={['top']} style={S.container}>
+      {/* Header */}
+      <LinearGradient colors={['#1E40AF','#3B82F6']} style={S.header}>
+        <Text style={S.headerTitle}>{t('notifications.system_alerts')}</Text>
+        <TouchableOpacity style={S.refreshBtn} onPress={() => refetch()}>
+          <Ionicons name="refresh-outline" size={20} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
+
+      {/* Count bar */}
+      {alerts.length > 0 && (
+        <View style={S.countBar}>
+          <View style={S.countDot} />
+          <Text style={S.countText}>{alerts.length} active alert{alerts.length!==1?'s':''}</Text>
+        </View>
+      )}
 
       <FlatList
         data={alerts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderAlertItem}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={S.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="notifications-off-outline" size={60} color={colors.border} />
-            <Text style={styles.emptyText}>{t('notifications.no_alerts')}</Text>
+          <View style={S.empty}>
+            <LinearGradient colors={['#EFF6FF','#DBEAFE']} style={S.emptyIcon}>
+              <Ionicons name="notifications-off-outline" size={44} color="#3B82F6" />
+            </LinearGradient>
+            <Text style={S.emptyTitle}>{t('notifications.no_alerts')}</Text>
+            <Text style={S.emptySub}>You're all caught up!</Text>
           </View>
         }
       />
@@ -111,88 +101,32 @@ export default function AlertsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.backgroundAlt,
-    flex: 1,
+const S = StyleSheet.create({
+  container: { flex:1, backgroundColor:'#F1F5F9' },
+  header: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20, paddingVertical:16 },
+  headerTitle: { fontSize:20, fontWeight:'800', color:'#fff' },
+  refreshBtn: { width:36, height:36, borderRadius:18, backgroundColor:'rgba(255,255,255,0.2)', justifyContent:'center', alignItems:'center' },
+  countBar: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:20, paddingVertical:10, backgroundColor:'#EFF6FF', borderBottomWidth:1, borderBottomColor:'#DBEAFE' },
+  countDot: { width:8, height:8, borderRadius:4, backgroundColor:'#3B82F6' },
+  countText: { fontSize:13, fontWeight:'600', color:'#3B82F6' },
+  list: { padding:16, paddingBottom:80 },
+  card: {
+    flexDirection:'row', alignItems:'flex-start', gap:14,
+    backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:12,
+    shadowColor:'#000', shadowOffset:{width:0,height:2}, shadowOpacity:0.07, shadowRadius:8, elevation:2,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  markAllBtn: {
-    padding: spacing.xs,
-  },
-  markAllText: {
-    ...typography.caption,
-    color: colors.primary,
-  },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxxl,
-  },
-  alertCard: {
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.xl,
-  },
-  alertContent: {
-    flexDirection: 'row',
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  alertText: {
-    flex: 1,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  alertTitle: {
-    ...typography.bodyBold,
-    color: colors.text,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  alertTime: {
-    ...typography.tiny,
-    color: colors.textTertiary,
-  },
-  alertMessage: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  alertFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dismissText: {
-    ...typography.tiny,
-    color: colors.textTertiary,
-  },
-  emptyState: {
-    alignItems: 'center',
-    marginTop: 100,
-    gap: spacing.md,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textTertiary,
-  },
+  iconWrap: { width:48, height:48, borderRadius:24, justifyContent:'center', alignItems:'center' },
+  cardBody: { flex:1, gap:6 },
+  cardTop: { flexDirection:'row', justifyContent:'space-between', alignItems:'center' },
+  cardTitle: { fontSize:15, fontWeight:'700', color:'#1E293B', flex:1, marginRight:8 },
+  cardTime: { fontSize:11, color:'#94A3B8' },
+  cardMsg: { fontSize:13, color:'#64748B', lineHeight:18 },
+  cardActions: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop:4 },
+  actionBtn: { paddingHorizontal:14, paddingVertical:6, borderRadius:20 },
+  actionText: { fontSize:12, fontWeight:'700' },
+  dismissText: { fontSize:12, color:'#94A3B8' },
+  empty: { alignItems:'center', paddingVertical:80, gap:16 },
+  emptyIcon: { width:88, height:88, borderRadius:44, justifyContent:'center', alignItems:'center' },
+  emptyTitle: { fontSize:17, fontWeight:'700', color:'#1E293B' },
+  emptySub: { fontSize:13, color:'#94A3B8' },
 });
