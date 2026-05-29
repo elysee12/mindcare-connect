@@ -8,68 +8,111 @@ export class PatientService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPatientDto: CreatePatientDto) {
+    console.log('=== Creating Patient ===');
+    console.log('Input data:', createPatientDto);
+
     const data = { ...createPatientDto };
 
     if (!data.assignedChwId) {
       delete data.assignedChwId;
     }
-    if (!data.assignedFamilyId) {
-      delete data.assignedFamilyId;
-    }
     if (!data.registeredByMhpId) {
       delete data.registeredByMhpId;
     }
 
-    const patient = await this.prisma.patient.create({ data });
+    // Use a transaction to ensure everything succeeds or fails together
+    const result = await this.prisma.$transaction(async (prisma) => {
+      let assignedFamilyId = data.assignedFamilyId;
 
-    // Create system log for registration
-    await this.prisma.systemLog.create({
-      data: {
-        event: `Patient ${patient.fullName} (ID: ${patient.id}) registered`,
-        userId: patient.registeredByMhpId,
-      },
+      // Auto-create family member if no family ID is provided
+      if (!assignedFamilyId) {
+        console.log('Auto-creating family member');
+        // Create a unique email for family member (using patient name + timestamp)
+        const familyEmail = `${data.fullName.toLowerCase().replace(/\s+/g, '.')}.family.${Date.now()}@example.com`;
+        
+        const familyMember = await prisma.user.create({
+          data: {
+            fullName: `${data.fullName} (Family)`,
+            email: familyEmail,
+            password: 'Family@123', // Default password
+            role: 'FAMILY',
+            phone: data.contact,
+            province: data.province,
+            district: data.district,
+            sector: data.sector,
+            cell: data.cell,
+            village: data.village,
+          },
+        });
+
+        console.log('Family member created with ID:', familyMember.id);
+        assignedFamilyId = familyMember.id;
+      }
+
+      console.log('Creating patient with data:', { ...data, assignedFamilyId });
+
+      const patient = await prisma.patient.create({
+        data: {
+          ...data,
+          assignedFamilyId,
+        },
+        include: { assignedFamily: true },
+      });
+
+      console.log('Patient created:', patient);
+
+      // Create system log for registration
+      await prisma.systemLog.create({
+        data: {
+          event: `Patient ${patient.fullName} (ID: ${patient.id}) registered`,
+          userId: patient.registeredByMhpId,
+        },
+      });
+
+      // Create notifications for assigned CHW and Family Member
+      if (patient.assignedChwId) {
+        await prisma.notification.create({
+          data: {
+            type: 'ASSIGNMENT',
+            title: 'New Patient Assigned',
+            message: `Patient ${patient.fullName} has been assigned to you.`,
+            metadata: JSON.stringify({ patientName: patient.fullName }),
+            userId: patient.assignedChwId,
+          },
+        });
+
+        await prisma.systemLog.create({
+          data: {
+            event: `Patient ${patient.fullName} assigned to CHW (ID: ${patient.assignedChwId})`,
+            userId: patient.registeredByMhpId,
+          },
+        });
+      }
+
+      if (patient.assignedFamilyId) {
+        await prisma.notification.create({
+          data: {
+            type: 'ASSIGNMENT',
+            title: 'Patient Assigned',
+            message: `Patient ${patient.fullName} has been assigned to you.`,
+            metadata: JSON.stringify({ patientName: patient.fullName }),
+            userId: patient.assignedFamilyId,
+          },
+        });
+
+        await prisma.systemLog.create({
+          data: {
+            event: `Patient ${patient.fullName} assigned to Family Member (ID: ${patient.assignedFamilyId})`,
+            userId: patient.registeredByMhpId,
+          },
+        });
+      }
+
+      return patient;
     });
 
-    // Create notifications for assigned CHW and Family Member
-    if (patient.assignedChwId) {
-      await this.prisma.notification.create({
-        data: {
-          type: 'ASSIGNMENT',
-          title: 'New Patient Assigned',
-          message: `Patient ${patient.fullName} has been assigned to you.`,
-          metadata: JSON.stringify({ patientName: patient.fullName }),
-          userId: patient.assignedChwId,
-        },
-      });
-
-      await this.prisma.systemLog.create({
-        data: {
-          event: `Patient ${patient.fullName} assigned to CHW (ID: ${patient.assignedChwId})`,
-          userId: patient.registeredByMhpId,
-        },
-      });
-    }
-
-    if (patient.assignedFamilyId) {
-      await this.prisma.notification.create({
-        data: {
-          type: 'ASSIGNMENT',
-          title: 'Patient Assigned',
-          message: `Patient ${patient.fullName} has been assigned to you.`,
-          metadata: JSON.stringify({ patientName: patient.fullName }),
-          userId: patient.assignedFamilyId,
-        },
-      });
-
-      await this.prisma.systemLog.create({
-        data: {
-          event: `Patient ${patient.fullName} assigned to Family Member (ID: ${patient.assignedFamilyId})`,
-          userId: patient.registeredByMhpId,
-        },
-      });
-    }
-
-    return patient;
+    console.log('=== Patient creation complete ===');
+    return result;
   }
 
   async findAll(search?: string, role?: string, mhpId?: string, assignedChwId?: string, assignedFamilyId?: string, tracked?: boolean) {

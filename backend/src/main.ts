@@ -9,7 +9,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:8081',
+    origin: true, // Allow all origins for testing
+    credentials: true,
   });
 
   // Serve static files from uploads directory
