@@ -109,7 +109,7 @@ export default function RegisterPatient() {
     try {
       const formData = new FormData();
       formData.append('file', { uri, type: 'image/jpeg', name: `patient-${Date.now()}.jpg` } as any);
-      const backendUrl = Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com';
+      const backendUrl = Constants.expoConfig?.extra?.BACKEND_URL;
       const res = await fetch(`${backendUrl}/api/upload`, { method: 'POST', body: formData, headers: { 'x-user-id': currentUser?.id || '' } });
       if (!res.ok) throw new Error('Upload failed');
       return (await res.json()).url;

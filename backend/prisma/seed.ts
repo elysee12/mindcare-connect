@@ -22,7 +22,7 @@ async function main() {
     data: {
       fullName: 'Admin User',
       email: 'admin@mindcare.com',
-      password: await hashPassword('Admin123'),
+      password: await hashPassword('Admin@123'),
       role: 'ADMIN',
     },
   });

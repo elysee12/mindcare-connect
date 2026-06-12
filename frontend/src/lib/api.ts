@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // Backend URL — reads from app.json extra config, falls back to live Render URL
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com') + '/api';
+const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL) + '/api';
 
 let authUserId: string | null = null;
 

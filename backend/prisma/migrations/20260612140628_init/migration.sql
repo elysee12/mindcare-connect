@@ -7,6 +7,7 @@ CREATE TABLE `User` (
     `phone` VARCHAR(191) NULL,
     `role` ENUM('MHP', 'CHW', 'FAMILY', 'ADMIN') NOT NULL DEFAULT 'CHW',
     `workplace` VARCHAR(191) NULL,
+    `province` VARCHAR(191) NULL,
     `district` VARCHAR(191) NULL,
     `sector` VARCHAR(191) NULL,
     `cell` VARCHAR(191) NULL,
@@ -32,6 +33,7 @@ CREATE TABLE `Patient` (
     `riskLevel` VARCHAR(191) NOT NULL DEFAULT 'Low',
     `photoUrl` VARCHAR(191) NULL,
     `tracked` BOOLEAN NOT NULL DEFAULT false,
+    `province` VARCHAR(191) NULL,
     `district` VARCHAR(191) NULL,
     `sector` VARCHAR(191) NULL,
     `cell` VARCHAR(191) NULL,
@@ -39,6 +41,9 @@ CREATE TABLE `Patient` (
     `registeredByMhpId` INTEGER NULL,
     `assignedChwId` INTEGER NULL,
     `assignedFamilyId` INTEGER NULL,
+    `foundByUserId` INTEGER NULL,
+    `locationFound` VARCHAR(191) NULL,
+    `foundDetails` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -64,6 +69,7 @@ CREATE TABLE `Notification` (
     `type` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `message` VARCHAR(191) NOT NULL,
+    `metadata` VARCHAR(191) NULL,
     `userId` INTEGER NULL,
     `isRead` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -78,6 +84,7 @@ CREATE TABLE `Reminder` (
     `type` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `time` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
     `completed` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -126,6 +133,9 @@ ALTER TABLE `Patient` ADD CONSTRAINT `Patient_assignedChwId_fkey` FOREIGN KEY (`
 
 -- AddForeignKey
 ALTER TABLE `Patient` ADD CONSTRAINT `Patient_assignedFamilyId_fkey` FOREIGN KEY (`assignedFamilyId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Patient` ADD CONSTRAINT `Patient_foundByUserId_fkey` FOREIGN KEY (`foundByUserId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Followup` ADD CONSTRAINT `Followup_patientId_fkey` FOREIGN KEY (`patientId`) REFERENCES `Patient`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
