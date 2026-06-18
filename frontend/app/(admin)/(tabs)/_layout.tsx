@@ -45,11 +45,11 @@ export default function AdminTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="lessons"
         options={{
-          title: t('nav.reports'),
+          title: t('nav.lessons'),
           tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons name={focused ? 'analytics' : 'analytics-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'school' : 'school-outline'} size={size} color={color} />
           ),
         }}
       />

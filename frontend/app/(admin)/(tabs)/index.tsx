@@ -103,7 +103,7 @@ export default function AdminDashboard() {
   const actions = [
     { title: t('dashboard.user_management'), subtitle: 'Manage all system users',       icon: 'people' as const,           grad: ['#064E3B','#2EB67D'] as [string,string], glow: '#2EB67D20', route: '/users' },
     { title: t('dashboard.assign_roles'),    subtitle: 'Update user roles & permissions', icon: 'shield-checkmark' as const, grad: ['#3730A3','#6366F1'] as [string,string], glow: '#6366F120', route: '/(admin)/features/assign-roles' },
-    { title: t('dashboard.view_reports'),    subtitle: 'Analytics & report summaries',  icon: 'analytics' as const,        grad: ['#065F46','#10B981'] as [string,string], glow: '#10B98120', route: '/reports' },
+    { title: 'Lessons Management',           subtitle: 'Manage training content',       icon: 'school' as const,           grad: ['#6D28D9','#7C3AED'] as [string,string], glow: '#7C3AED20', route: '/(admin)/features/lesson-management' },
     { title: t('dashboard.system_logs'),     subtitle: 'View system activity logs',     icon: 'server' as const,           grad: ['#78350F','#F59E0B'] as [string,string], glow: '#F59E0B20', route: '/(admin)/features/system-logs' },
   ];
 
