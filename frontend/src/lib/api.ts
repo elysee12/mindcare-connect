@@ -111,6 +111,18 @@ export const api = {
     if (parts.length > 0) query = `?${parts.join('&')}`;
     return request(`/reports${query}`);
   },
+  // Lessons API
+  lessons: (search?: string, category?: string) => {
+    const params = [];
+    if (search) params.push(`search=${encodeURIComponent(search)}`);
+    if (category) params.push(`category=${encodeURIComponent(category)}`);
+    return request(`/lessons${params.length ? `?${params.join('&')}` : ''}`);
+  },
+  lessonById: (id: number) => request(`/lessons/${id}`),
+  createLesson: (payload: any) => request('/lessons', { method: 'POST', body: JSON.stringify(payload) }),
+  updateLesson: (id: number, payload: any) => request(`/lessons/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteLesson: (id: number) => request(`/lessons/${id}`, { method: 'DELETE' }),
+  lessonCategories: () => request('/lessons/categories'),
   globalFollowups: (params?: { search?: string; startDate?: string; endDate?: string }) => {
     let query = '';
     if (params) {

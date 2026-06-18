@@ -1,4 +1,4 @@
-export type UserRole = 'MHP' | 'CHW' | 'FAMILY' | 'ADMIN';
+export type UserRole = 'MHP' | 'CHW' | 'FAMILY' | 'ADMIN' | 'NURSE';
 
 export class CreateUserDto {
   fullName: string;

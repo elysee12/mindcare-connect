@@ -14,6 +14,7 @@ const ROLE_META: Record<string, { color: string; bg: string }> = {
   CHW:    { color: '#3B82F6', bg: '#DBEAFE' },
   FAMILY: { color: '#7C3AED', bg: '#EDE9FE' },
   ADMIN:  { color: '#F59E0B', bg: '#FEF3C7' },
+  NURSE:  { color: '#7C3AED', bg: '#EDE9FE' },
 };
 function getRoleMeta(role: string) {
   return ROLE_META[(role || '').toUpperCase()] || { color: '#64748B', bg: '#F1F5F9' };

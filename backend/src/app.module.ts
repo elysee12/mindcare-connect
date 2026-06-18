@@ -13,6 +13,7 @@ import { ReportModule } from './report/report.module';
 import { AuthModule } from './auth/auth.module';
 import { UploadModule } from './upload/upload.module';
 import { MailModule } from './mail/mail.module';
+import { LessonModule } from './lesson/lesson.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -29,6 +30,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule, 
     UploadModule, 
     MailModule,
+    LessonModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],

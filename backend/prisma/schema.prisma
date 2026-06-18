@@ -18,6 +18,7 @@ enum UserRole {
   CHW
   FAMILY
   ADMIN
+  NURSE
 }
 
 model User {
@@ -42,6 +43,7 @@ model User {
   reportsSubmitted    Report[]   @relation("ReportByCHW")
   reportsReceived     Report[]   @relation("ReportForMHP")
   foundPatients       Patient[]  @relation("PatientFoundBy")
+  createdLessons      Lesson[]
   otpCode             String?
   otpExpiry           DateTime?
   createdAt           DateTime   @default(now())
@@ -150,5 +152,21 @@ model SystemLog {
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @db.Text
+  fileUrl     String?
+  fileName    String?
+  fileType    String?
+  fileSize    Int?
+  category    String?
+  isPublished Boolean  @default(true)
+  createdBy   Int?
+  creator     User?    @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 

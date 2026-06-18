@@ -28,6 +28,14 @@ const ROLES = [
     grad: ['#1E3A8A', '#3B82F6'] as [string, string],
     desc: 'Field workers & community agents',
   },
+  {
+    key: 'NURSE',
+    label: 'Nurse',
+    shortLabel: 'NURSE',
+    icon: 'bandage' as const,
+    grad: ['#7C3AED', '#A78BFA'] as [string, string],
+    desc: 'Nursing & clinical support',
+  },
 ];
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
