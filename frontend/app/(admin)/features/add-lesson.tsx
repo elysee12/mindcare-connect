@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
 
 const CATEGORIES = [
   { key: 'Mental Health Basics', icon: 'heart' as const },
@@ -66,21 +67,18 @@ export default function AddLesson() {
         name: file.name,
       } as any);
 
-      const response = await fetch(
-        (await api.users()).length ? 
-        api.toString().replace('/api', '') + '/api/upload' : 
-        'http://localhost:3000/api/upload',
-        {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      // Get backend URL from Constants
+      const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com';
+      
+      const response = await fetch(`${BACKEND_URL}/api/upload`, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - let the browser set it with boundary
+      });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Upload failed');
       }
 
       const result = await response.json();
