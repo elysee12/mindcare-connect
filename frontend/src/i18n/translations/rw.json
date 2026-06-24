@@ -54,8 +54,11 @@
     "notifications": "Inshira",
     "no_notifications": "Nta nshira urabona",
     "track_patient": "Kurikirana umurwayi",
+    "appointments": "Gahunda",
     "report": "Raporo",
-    "view_tracked_patients": "Reba abarwayi bakurikiranywa",
+    "view_tracked_patients": "Reba abarwayi bakurikiranwa",
+    "medications": "Imiti",
+    "training_content": "Ibikubiyemo mu mahugurwa",
     "patient_list": "Urutonde rw'abarwayi",
     "clinical_statistics": "Imibare y'ubuvuzi",
     "patients": "Abarwayi",
@@ -583,6 +586,7 @@
     "patients": "Abarwayi",
     "alerts": "Inshira",
     "reminders": "Ibyibutsa",
-    "profile": "Umwirondoro"
+    "profile": "Umwirondoro",
+    "lessons": "Amasomo"
   }
 }

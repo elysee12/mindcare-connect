@@ -45,6 +45,10 @@ export default function FamilyDashboard() {
     { title: t('family.view_treatment_changes'), subtitle: 'Track treatment history',         icon: 'flask' as const,     grad: ['#4C1D95','#8B5CF6'] as [string,string], glow: '#8B5CF620', route: '/(family)/features/view-treatment-changes' },
   ];
 
+  const outlineActions = [
+    { title: 'Training Content', subtitle: 'Access learning materials', icon: 'school' as const, grad: ['#7C3AED','#6D28D9'] as [string,string], glow: '#7C3AED20', route: '/(shared)/lessons' },
+  ];
+
   return (
     <Container safeArea edges={['top']} style={S.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={S.scroll}>
@@ -93,6 +97,23 @@ export default function FamilyDashboard() {
               </TouchableOpacity>
             ))}
           </View>
+          {/* Outline cards */}
+          {outlineActions.map(a => (
+            <TouchableOpacity key={a.title} style={S.outlineCard} onPress={() => router.push(a.route as any)} activeOpacity={0.85}>
+              <View style={[S.outlineIconWrap, { backgroundColor: a.glow }]}>
+                <LinearGradient colors={a.grad} style={S.outlineIconGrad}>
+                  <Ionicons name={a.icon} size={22} color="#fff" />
+                </LinearGradient>
+              </View>
+              <View style={S.outlineText}>
+                <Text style={S.outlineTitle}>{a.title}</Text>
+                <Text style={S.outlineSub}>{a.subtitle}</Text>
+              </View>
+              <View style={[S.outlineArrowWrap, { backgroundColor: a.glow }]}>
+                <Ionicons name="arrow-forward" size={16} color={a.grad[0]} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Recent updates */}
@@ -160,7 +181,7 @@ const S = StyleSheet.create({
   statLbl: { fontSize:10, color:'rgba(255,255,255,0.75)', textAlign:'center' },
   section: { marginHorizontal:16, marginTop:20 },
   sectionTitle: { fontSize:16, fontWeight:'700', color:'#1E293B', marginBottom:12 },
-  actionsRow: { flexDirection:'row', gap:12 },
+  actionsRow: { flexDirection:'row', gap:12, marginBottom:12 },
   halfCard: { flex:1, borderRadius:20, overflow:'hidden', shadowColor:'#000', shadowOffset:{width:0,height:8}, shadowOpacity:0.2, shadowRadius:16, elevation:6 },
   halfCardGrad: { padding:18, minHeight:165, justifyContent:'space-between', overflow:'hidden' },
   halfDecorCircle: { position:'absolute', width:100, height:100, borderRadius:50, backgroundColor:'rgba(255,255,255,0.08)', top:-30, right:-30 },
@@ -175,6 +196,13 @@ const S = StyleSheet.create({
   updateMsg: { fontSize:12, color:'#94A3B8', marginTop:2 },
   emptyWrap: { alignItems:'center', paddingVertical:32, gap:10 },
   emptyText: { fontSize:13, color:'#94A3B8' },
+  outlineCard: { flexDirection:'row', alignItems:'center', gap:14, backgroundColor:'#fff', borderRadius:20, padding:16, shadowColor:'#000', shadowOffset:{width:0,height:4}, shadowOpacity:0.08, shadowRadius:12, elevation:3, borderWidth:1, borderColor:'#F1F5F9', marginBottom:12 },
+  outlineIconWrap: { width:52, height:52, borderRadius:16, justifyContent:'center', alignItems:'center' },
+  outlineIconGrad: { width:44, height:44, borderRadius:14, justifyContent:'center', alignItems:'center' },
+  outlineText: { flex:1 },
+  outlineTitle: { fontSize:15, fontWeight:'800', color:'#0F172A' },
+  outlineSub: { fontSize:12, color:'#94A3B8', marginTop:3 },
+  outlineArrowWrap: { width:36, height:36, borderRadius:18, justifyContent:'center', alignItems:'center' },
   sheetOverlay: { flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' },
   sheet: { backgroundColor:'#fff', borderTopLeftRadius:24, borderTopRightRadius:24, maxHeight:'80%' },
   sheetHandle: { width:40, height:4, borderRadius:2, backgroundColor:'#E2E8F0', alignSelf:'center', marginTop:10 },

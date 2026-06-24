@@ -54,8 +54,11 @@
     "notifications": "Notifications",
     "no_notifications": "No notifications yet",
     "track_patient": "Track Patient",
+    "appointments": "Appointments",
     "report": "Report",
     "view_tracked_patients": "View Tracked Patients",
+    "medications": "Medications",
+    "training_content": "Training Content",
     "patient_list": "Patient List",
     "clinical_statistics": "Clinical Statistics",
     "patients": "Patients",
@@ -583,6 +586,7 @@
     "patients": "Patients",
     "alerts": "Alerts",
     "reminders": "Reminders",
-    "profile": "Profile"
+    "profile": "Profile",
+    "lessons": "Lessons"
   }
 }

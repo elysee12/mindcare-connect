@@ -55,6 +55,20 @@ export class LessonService {
     return lesson;
   }
 
+  private fixFileUrl(url: string | null): string | null {
+    if (!url) return null;
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+    
+    // If it's already an absolute URL but with potentially wrong host
+    if (url.includes('/uploads/')) {
+      const parts = url.split('/uploads/');
+      const filename = parts[parts.length - 1];
+      return `${backendUrl}/uploads/${filename}`;
+    }
+    
+    return url;
+  }
+
   async findAll(search?: string, category?: string) {
     const where: any = { isPublished: true };
 
@@ -70,7 +84,7 @@ export class LessonService {
       where.category = category;
     }
 
-    return this.prisma.lesson.findMany({
+    const lessons = await this.prisma.lesson.findMany({
       where,
       include: {
         creator: {
@@ -84,6 +98,11 @@ export class LessonService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return lessons.map(lesson => ({
+      ...lesson,
+      fileUrl: this.fixFileUrl(lesson.fileUrl)
+    }));
   }
 
   async findOne(id: number) {
@@ -105,7 +124,10 @@ export class LessonService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    return lesson;
+    return {
+      ...lesson,
+      fileUrl: this.fixFileUrl(lesson.fileUrl)
+    };
   }
 
   async update(id: number, updateLessonDto: UpdateLessonDto) {

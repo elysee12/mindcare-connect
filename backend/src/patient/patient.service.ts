@@ -7,6 +7,20 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 export class PatientService {
   constructor(private prisma: PrismaService) {}
 
+  private fixPhotoUrl(url: string | null): string | null {
+    if (!url) return null;
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+    
+    // If it's already an absolute URL but with potentially wrong host
+    if (url.includes('/uploads/')) {
+      const parts = url.split('/uploads/');
+      const filename = parts[parts.length - 1];
+      return `${backendUrl}/uploads/${filename}`;
+    }
+    
+    return url;
+  }
+
   async create(createPatientDto: CreatePatientDto) {
     console.log('=== Creating Patient ===');
     console.log('Input data:', createPatientDto);
@@ -112,7 +126,10 @@ export class PatientService {
     });
 
     console.log('=== Patient creation complete ===');
-    return result;
+    return {
+      ...result,
+      photoUrl: this.fixPhotoUrl(result.photoUrl),
+    };
   }
 
   async findAll(search?: string, role?: string, mhpId?: string, assignedChwId?: string, assignedFamilyId?: string, tracked?: boolean) {
@@ -155,19 +172,29 @@ export class PatientService {
 
     const where = conditions.length > 0 ? { AND: conditions } : {};
 
-    return this.prisma.patient.findMany({
+    const patients = await this.prisma.patient.findMany({
       where,
       orderBy: { fullName: 'asc' },
       include: { assignedFamily: true, registeredByMhp: true, assignedChw: true },
     });
+
+    return patients.map((p) => ({
+      ...p,
+      photoUrl: this.fixPhotoUrl(p.photoUrl),
+    }));
   }
 
   async findTracked() {
-    return this.prisma.patient.findMany({
+    const patients = await this.prisma.patient.findMany({
       where: { tracked: true },
       orderBy: { fullName: 'asc' },
       include: { registeredByMhp: true, assignedFamily: true, assignedChw: true },
     });
+
+    return patients.map((p) => ({
+      ...p,
+      photoUrl: this.fixPhotoUrl(p.photoUrl),
+    }));
   }
 
   async trackPatient(id: number) {
@@ -200,7 +227,10 @@ export class PatientService {
       },
     });
 
-    return patient;
+    return {
+      ...patient,
+      photoUrl: this.fixPhotoUrl(patient.photoUrl),
+    };
   }
 
   async markAsFound(id: number, finderId: number, location: string, details?: string) {
@@ -229,17 +259,40 @@ export class PatientService {
             patientName: patient.fullName,
             location,
             finderName: patient.foundByUser?.fullName,
+            patientId: patient.id,
+            finderId: patient.foundByUser?.id,
           }),
           userId: patient.assignedChwId,
         },
       });
     }
+    // Also notify the family member if assigned
+    if (patient.assignedFamilyId) {
+      await this.prisma.notification.create({
+        data: {
+          type: 'PATIENT_FOUND',
+          title: 'Missing Patient Found',
+          message: `${patient.fullName} has been located at ${location} by ${patient.foundByUser?.fullName}.`,
+          metadata: JSON.stringify({
+            patientName: patient.fullName,
+            location,
+            finderName: patient.foundByUser?.fullName,
+            patientId: patient.id,
+            finderId: patient.foundByUser?.id,
+          }),
+          userId: patient.assignedFamilyId,
+        },
+      });
+    }
 
-    return patient;
+    return {
+      ...patient,
+      photoUrl: this.fixPhotoUrl(patient.photoUrl),
+    };
   }
 
   async findOne(id: number) {
-    return this.prisma.patient.findUnique({
+    const patient = await this.prisma.patient.findUnique({
       where: { id },
       include: {
         assignedChw: true,
@@ -249,6 +302,13 @@ export class PatientService {
         treatmentChanges: true,
       },
     });
+
+    if (!patient) return null;
+
+    return {
+      ...patient,
+      photoUrl: this.fixPhotoUrl(patient.photoUrl),
+    };
   }
 
   async update(id: number, updatePatientDto: UpdatePatientDto) {
@@ -321,21 +381,35 @@ export class PatientService {
       });
     }
 
-    return patient;
+    return {
+      ...patient,
+      photoUrl: this.fixPhotoUrl(patient.photoUrl),
+    };
   }
 
   async remove(id: number) {
     const patient = await this.prisma.patient.findUnique({ where: { id } });
     
-    if (patient) {
-      await this.prisma.systemLog.create({
+    if (!patient) return null;
+
+    // Use a transaction to delete all related records first (manual cascade)
+    return this.prisma.$transaction(async (prisma) => {
+      // 1. Delete all related records
+      await prisma.followup.deleteMany({ where: { patientId: id } });
+      await prisma.reminder.deleteMany({ where: { patientId: id } });
+      await prisma.treatmentChange.deleteMany({ where: { patientId: id } });
+      await prisma.report.deleteMany({ where: { patientId: id } });
+
+      // 2. Log the event
+      await prisma.systemLog.create({
         data: {
-          event: `Patient ${patient.fullName} (ID: ${id}) deleted`,
+          event: `Patient ${patient.fullName} (ID: ${id}) deleted with all related history`,
           userId: patient.registeredByMhpId,
         },
       });
-    }
 
-    return this.prisma.patient.delete({ where: { id } });
+      // 3. Finally delete the patient
+      return prisma.patient.delete({ where: { id } });
+    });
   }
 }

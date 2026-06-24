@@ -32,13 +32,14 @@ export class UploadController {
       throw new BadRequestException('No file provided');
     }
 
-    const baseUrl = process.env.BACKEND_URL;
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     return {
       filename: file.filename,
       originalname: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
       url: `${baseUrl}/uploads/${file.filename}`,
+      path: `/uploads/${file.filename}`, // Return relative path too
     };
   }
 
@@ -50,13 +51,14 @@ export class UploadController {
       throw new BadRequestException('No files provided');
     }
 
-    const baseUrl = process.env.BACKEND_URL;
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     return files.map((file) => ({
       filename: file.filename,
       originalname: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
       url: `${baseUrl}/uploads/${file.filename}`,
+      path: `/uploads/${file.filename}`,
     }));
   }
 }

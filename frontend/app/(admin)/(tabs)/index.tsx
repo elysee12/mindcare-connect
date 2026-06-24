@@ -329,26 +329,26 @@ export default function AdminDashboard() {
                   </Text>
                 </View>
               </View>
-              {selectedNotification?.user && (
+              {selectedNotification?.finder && (
                 <>
                   <View style={styles.divider} />
                   <Text style={styles.finderHeader}>{t('notifications.finder_contact')}</Text>
                   <View style={styles.contactRow}>
                     <Ionicons name="call-outline" size={16} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.phone || t('common.na')}</Text>
+                    <Text style={styles.contactText}>{selectedNotification.finder.phone || t('common.na')}</Text>
                   </View>
                   <View style={styles.contactRow}>
                     <Ionicons name="mail-outline" size={16} color={colors.primary} />
-                    <Text style={styles.contactText}>{selectedNotification.user.email || t('common.na')}</Text>
+                    <Text style={styles.contactText}>{selectedNotification.finder.email || t('common.na')}</Text>
                   </View>
                   <View style={styles.divider} />
                   <Text style={styles.finderHeader}>{t('notifications.finder_address')}</Text>
                   <View style={styles.addressBox}>
                     <Ionicons name="home-outline" size={16} color={colors.primary} />
                     <Text style={styles.addressText}>
-                      {[selectedNotification.user.province, selectedNotification.user.district,
-                        selectedNotification.user.sector, selectedNotification.user.cell,
-                        selectedNotification.user.village].filter(Boolean).join(', ') || t('notifications.address_not_available')}
+                      {[selectedNotification.finder.province, selectedNotification.finder.district,
+                        selectedNotification.finder.sector, selectedNotification.finder.cell,
+                        selectedNotification.finder.village].filter(Boolean).join(', ') || t('notifications.address_not_available')}
                     </Text>
                   </View>
                 </>

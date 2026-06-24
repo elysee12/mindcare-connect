@@ -55,6 +55,7 @@ export default function MhpDashboard() {
     { title: t('dashboard.patient_management'),     subtitle: 'Manage your assigned patients',    icon: 'people' as const,        grad: ['#10B981', '#059669'] as [string,string], glow: '#10B98120', route: '/(mhp)/(tabs)/patients' },
     { title: t('dashboard.appointment_management'), subtitle: 'Schedule & track appointments',    icon: 'calendar' as const,      grad: ['#0EA5E9', '#0284C7'] as [string,string], glow: '#0EA5E920', route: '/(mhp)/features/appointment-management' },
     { title: t('dashboard.treatment_management'),   subtitle: 'Record treatment changes',         icon: 'medical' as const,       grad: ['#8B5CF6', '#7C3AED'] as [string,string], glow: '#8B5CF620', route: '/(mhp)/features/treatment-management' },
+    { title: 'Training Content',                    subtitle: 'Access learning materials',       icon: 'school' as const,        grad: ['#7C3AED', '#6D28D9'] as [string,string], glow: '#7C3AED20', route: '/(shared)/lessons' },
     { title: t('dashboard.view_reports'),           subtitle: 'View CHW & follow-up reports',    icon: 'document-text' as const, grad: ['#F59E0B', '#D97706'] as [string,string], glow: '#F59E0B20', route: null },
   ];
 
@@ -125,8 +126,8 @@ export default function MhpDashboard() {
               <View style={S.wideArrow}><Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" /></View>
             </LinearGradient>
           </TouchableOpacity>
-          {/* Outline card */}
-          <TouchableOpacity style={S.outlineCard} onPress={() => setShowReports(true)} activeOpacity={0.85}>
+          {/* Outline card - Training Content */}
+          <TouchableOpacity style={S.outlineCard} onPress={() => router.push(actions[3].route as any)} activeOpacity={0.85}>
             <View style={[S.outlineIconWrap, { backgroundColor: actions[3].glow }]}>
               <LinearGradient colors={actions[3].grad} style={S.outlineIconGrad}>
                 <Ionicons name={actions[3].icon} size={22} color="#fff" />
@@ -138,6 +139,21 @@ export default function MhpDashboard() {
             </View>
             <View style={[S.outlineArrowWrap, { backgroundColor: actions[3].glow }]}>
               <Ionicons name="arrow-forward" size={16} color={actions[3].grad[0]} />
+            </View>
+          </TouchableOpacity>
+          {/* Outline card - View Reports */}
+          <TouchableOpacity style={S.outlineCard} onPress={() => setShowReports(true)} activeOpacity={0.85}>
+            <View style={[S.outlineIconWrap, { backgroundColor: actions[4].glow }]}>
+              <LinearGradient colors={actions[4].grad} style={S.outlineIconGrad}>
+                <Ionicons name={actions[4].icon} size={22} color="#fff" />
+              </LinearGradient>
+            </View>
+            <View style={S.outlineText}>
+              <Text style={S.outlineTitle}>{actions[4].title}</Text>
+              <Text style={S.outlineSub}>{actions[4].subtitle}</Text>
+            </View>
+            <View style={[S.outlineArrowWrap, { backgroundColor: actions[4].glow }]}>
+              <Ionicons name="arrow-forward" size={16} color={actions[4].grad[0]} />
             </View>
           </TouchableOpacity>
         </View>
@@ -232,11 +248,11 @@ export default function MhpDashboard() {
                   <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif?.createdAt ? new Date(selNotif.createdAt).toLocaleString() : t('common.na')}</Text>
                 </View>
               </View>
-              {selNotif?.user && (
+              {selNotif?.finder && (
                 <>
                   <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="call-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.phone || t('common.na')}</Text></View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="mail-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.email || t('common.na')}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="call-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.finder.phone || t('common.na')}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name="mail-outline" size={16} color="#2EB67D" /><Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.finder.email || t('common.na')}</Text></View>
                 </>
               )}
               <TouchableOpacity style={S.closeBtn} onPress={() => setShowDetail(false)}>

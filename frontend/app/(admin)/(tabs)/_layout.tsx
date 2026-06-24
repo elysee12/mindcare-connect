@@ -62,6 +62,15 @@ export default function AdminTabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: t('nav.reports'),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

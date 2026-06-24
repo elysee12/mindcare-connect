@@ -1,7 +1,15 @@
 import Constants from 'expo-constants';
 
 // Backend URL — reads from app.json extra config, falls back to live Render URL
-const BACKEND_URL = (Constants.expoConfig?.extra?.BACKEND_URL) + '/api';
+const getBackendUrl = () => {
+  let url = Constants.expoConfig?.extra?.BACKEND_URL || '';
+  if (url && !url.startsWith('http')) {
+    url = `http://${url}`;
+  }
+  return url + '/api';
+};
+
+const BACKEND_URL = getBackendUrl();
 
 let authUserId: string | null = null;
 

@@ -47,6 +47,21 @@ export class LessonController {
     return this.lessonService.findOne(+id);
   }
 
+  @Get(':id/file-info')
+  async getFileInfo(@Param('id') id: string) {
+    const lesson = await this.lessonService.findOne(+id);
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      hasFile: !!lesson.fileUrl,
+      fileUrl: lesson.fileUrl,
+      fileName: lesson.fileName,
+      fileType: lesson.fileType,
+      fileSize: lesson.fileSize,
+      isAccessible: lesson.fileUrl ? lesson.fileUrl.startsWith('http') : false,
+    };
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @Body() updateLessonDto: UpdateLessonDto) {

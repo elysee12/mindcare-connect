@@ -43,7 +43,7 @@ model User {
   reportsSubmitted    Report[]   @relation("ReportByCHW")
   reportsReceived     Report[]   @relation("ReportForMHP")
   foundPatients       Patient[]  @relation("PatientFoundBy")
-  createdLessons      Lesson[]
+  createdLessons      Lesson[]   @relation("LessonCreator")
   otpCode             String?
   otpExpiry           DateTime?
   createdAt           DateTime   @default(now())
@@ -165,7 +165,7 @@ model Lesson {
   category    String?
   isPublished Boolean  @default(true)
   createdBy   Int?
-  creator     User?    @relation(fields: [createdBy], references: [id])
+  creator     User?    @relation("LessonCreator", fields: [createdBy], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

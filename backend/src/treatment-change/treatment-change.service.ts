@@ -18,7 +18,7 @@ export class TreatmentChangeService {
     });
   }
 
-  async findAll(mhpId?: number, familyId?: number) {
+  async findAll(mhpId?: number, familyId?: number, chwId?: number) {
     let where: any = {};
     
     if (mhpId !== undefined) {
@@ -33,6 +33,13 @@ export class TreatmentChangeService {
       where = {
         patient: {
           assignedFamilyId: familyId
+        }
+      };
+    } else if (chwId !== undefined) {
+      // Show treatment changes for CHW's assigned patients only
+      where = {
+        patient: {
+          assignedChwId: chwId
         }
       };
     }

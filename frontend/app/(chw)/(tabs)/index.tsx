@@ -27,6 +27,15 @@ const ACTIONS = (t: any) => [
     wide: false,
   },
   {
+    title: t('dashboard.appointments'),
+    subtitle: 'View patient appointments',
+    icon: 'calendar' as const,
+    grad: ['#3B82F6', '#1E40AF'] as [string, string],
+    glow: '#3B82F620',
+    route: '/(chw)/features/appointments',
+    wide: false,
+  },
+  {
     title: t('dashboard.report'),
     subtitle: 'Submit regular or follow-up reports',
     icon: 'document-text' as const,
@@ -43,6 +52,24 @@ const ACTIONS = (t: any) => [
     glow: '#8B5CF620',
     route: '/(chw)/features/view-tracked-patients',
     wide: true,
+  },
+  {
+    title: t('dashboard.medications'),
+    subtitle: 'View patient medications',
+    icon: 'medkit' as const,
+    grad: ['#10B981', '#059669'] as [string, string],
+    glow: '#10B98120',
+    route: '/(chw)/features/medications',
+    wide: false,
+  },
+  {
+    title: t('dashboard.training_content'),
+    subtitle: 'Access learning materials',
+    icon: 'school' as const,
+    grad: ['#7C3AED', '#6D28D9'] as [string, string],
+    glow: '#7C3AED20',
+    route: '/(shared)/lessons',
+    wide: false,
   },
   {
     title: t('dashboard.patient_list'),
@@ -95,10 +122,10 @@ export default function ChwDashboard() {
   };
 
   const actions = ACTIONS(t);
-  // Split: first two side-by-side, third full-width, fourth standalone
+  // Split: first two side-by-side, third full-width, and the rest as outline cards
   const topPair  = actions.slice(0, 2);
   const wideCard = actions[2];
-  const lastCard = actions[3];
+  const outlineCards = actions.slice(3);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -208,25 +235,28 @@ export default function ChwDashboard() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Last card — full width, outlined style */}
-          <TouchableOpacity
-            style={S.outlineCard}
-            onPress={() => router.push(lastCard.route as any)}
-            activeOpacity={0.85}
-          >
-            <View style={[S.outlineIconWrap, { backgroundColor: lastCard.glow }]}>
-              <LinearGradient colors={lastCard.grad} style={S.outlineIconGrad}>
-                <Ionicons name={lastCard.icon} size={22} color="#fff" />
-              </LinearGradient>
-            </View>
-            <View style={S.outlineText}>
-              <Text style={S.outlineTitle}>{lastCard.title}</Text>
-              <Text style={S.outlineSub}>{lastCard.subtitle}</Text>
-            </View>
-            <View style={[S.outlineArrowWrap, { backgroundColor: lastCard.glow }]}>
-              <Ionicons name="arrow-forward" size={16} color={lastCard.grad[0]} />
-            </View>
-          </TouchableOpacity>
+          {/* Outline cards — full width, outlined style */}
+          {outlineCards.map(card => (
+            <TouchableOpacity
+              key={card.title}
+              style={S.outlineCard}
+              onPress={() => router.push(card.route as any)}
+              activeOpacity={0.85}
+            >
+              <View style={[S.outlineIconWrap, { backgroundColor: card.glow }]}>
+                <LinearGradient colors={card.grad} style={S.outlineIconGrad}>
+                  <Ionicons name={card.icon} size={22} color="#fff" />
+                </LinearGradient>
+              </View>
+              <View style={S.outlineText}>
+                <Text style={S.outlineTitle}>{card.title}</Text>
+                <Text style={S.outlineSub}>{card.subtitle}</Text>
+              </View>
+              <View style={[S.outlineArrowWrap, { backgroundColor: card.glow }]}>
+                <Ionicons name="arrow-forward" size={16} color={card.grad[0]} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* ── Recent Activity ── */}
@@ -329,16 +359,16 @@ export default function ChwDashboard() {
             </View>
             <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
               <Text style={{ fontSize: 15, color: '#1E293B', lineHeight: 22 }}>{selNotif?.message}</Text>
-              {selNotif?.user && (
+              {selNotif?.finder && (
                 <>
                   <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="call-outline" size={16} color="#3B82F6" />
-                    <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.phone || t('common.na')}</Text>
+                    <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.finder.phone || t('common.na')}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="mail-outline" size={16} color="#3B82F6" />
-                    <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.user.email || t('common.na')}</Text>
+                    <Text style={{ fontSize: 14, color: '#1E293B' }}>{selNotif.finder.email || t('common.na')}</Text>
                   </View>
                 </>
               )}
@@ -488,6 +518,7 @@ const S = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
     borderWidth: 1, borderColor: '#F1F5F9',
+    marginBottom: CARD_GAP,
   },
   outlineIconWrap: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   outlineIconGrad: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },

@@ -22,5 +22,5 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "exclude": ["prisma/seed.ts"]
+  "exclude": ["prisma/seed.ts", "fix-lesson-urls.ts"]
 }

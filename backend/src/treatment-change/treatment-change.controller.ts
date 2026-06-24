@@ -60,6 +60,7 @@ export class TreatmentChangeController {
     const currentUserId = req?.user?.id;
     let effectiveMhpId: number | undefined = undefined;
     let effectiveFamilyId: number | undefined = undefined;
+    let effectiveChwId: number | undefined = undefined;
 
     if (currentUserId) {
       const currentUser = await this.prisma.user.findUnique({
@@ -70,10 +71,12 @@ export class TreatmentChangeController {
         effectiveMhpId = currentUserId;
       } else if (currentUser && currentUser.role === 'FAMILY') {
         effectiveFamilyId = currentUserId;
+      } else if (currentUser && currentUser.role === 'CHW') {
+        effectiveChwId = currentUserId;
       }
     }
 
-    return this.treatmentChangeService.findAll(effectiveMhpId, effectiveFamilyId);
+    return this.treatmentChangeService.findAll(effectiveMhpId, effectiveFamilyId, effectiveChwId);
   }
 
   @Get(':id')
