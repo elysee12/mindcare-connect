@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "expo-export-android",
+			"type": "shell",
+			"command": "npx expo export --platform android --clear",
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

@@ -1,10 +1,25 @@
-import { createClient, AsyncStorageAdapter } from '@blinkdotnew/sdk';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
+let blinkClient: any = null;
 
-export const blink = createClient({
-  projectId: process.env.EXPO_PUBLIC_BLINK_PROJECT_ID!,
-  authRequired: false, // Allow browsing/login
-  auth: { mode: 'headless', webBrowser: WebBrowser },
-  storage: new AsyncStorageAdapter(AsyncStorage)
-});
+export function getBlinkClient() {
+  if (blinkClient) {
+    return blinkClient;
+  }
+
+  try {
+    const { createClient, AsyncStorageAdapter } = require('@blinkdotnew/sdk');
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const WebBrowser = require('expo-web-browser');
+
+    blinkClient = createClient({
+      projectId: process.env.EXPO_PUBLIC_BLINK_PROJECT_ID || 'mindcare-dashboard-ui-3bsa0xzw',
+      authRequired: false,
+      auth: { mode: 'headless', webBrowser: WebBrowser },
+      storage: new AsyncStorageAdapter(AsyncStorage),
+    });
+  } catch (error) {
+    console.warn('[blink] Unable to initialize client', error);
+    return null;
+  }
+
+  return blinkClient;
+}

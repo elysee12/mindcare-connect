@@ -1,4 +1,4 @@
-/**
+**
  * Script to fix lesson file URLs
  * 
  * This script updates all lesson fileUrl fields to use the correct production backend URL.

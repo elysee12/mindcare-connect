@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import * as DocumentPicker from 'expo-document-picker';
 import { useQuery } from '@tanstack/react-query';
-import Constants from 'expo-constants';
+import { getBackendUrl } from '@/config/backend';
 
 const CATEGORIES = [
   { key: 'Mental Health Basics', icon: 'heart' as const },
@@ -83,8 +83,8 @@ export default function EditLesson() {
         name: file.name,
       } as any);
 
-      // Get backend URL from Constants
-      const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL || 'https://mindcare-connect.onrender.com';
+      // Get backend URL from centralized config
+      const BACKEND_URL = getBackendUrl();
       
       const response = await fetch(`${BACKEND_URL}/api/upload`, {
         method: 'POST',

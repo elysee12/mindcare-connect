@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 13.2.0"
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -16,7 +17,8 @@
         "buildType": "apk"
       },
       "env": {
-        "BACKEND_URL": "https://mindcare-connect.onrender.com"
+        "BACKEND_URL": "http://192.168.0.105:3000",
+        "EXPO_PUBLIC_BACKEND_URL": "http://192.168.0.105:3000"
       }
     },
     "production": {
@@ -25,7 +27,10 @@
         "buildType": "apk"
       },
       "env": {
-        "BACKEND_URL": "https://mindcare-connect.onrender.com"
+        "BACKEND_URL": "https://mindcare-connect.onrender.com",
+        "EXPO_PUBLIC_BLINK_PROJECT_ID": "mindcare-dashboard-ui-3bsa0xzw",
+        "EXPO_PUBLIC_BLINK_PUBLISHABLE_KEY": "blnk_pk_qN6YQTWD9exonEDUbLoZfexlztqGbTxc",
+        "EXPO_PUBLIC_BACKEND_URL": "https://mindcare-connect.onrender.com"
       }
     }
   },

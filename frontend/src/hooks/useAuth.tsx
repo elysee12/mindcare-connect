@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { blink } from '@/lib/blink';
 import { setAuthUserId } from '@/lib/api';
+import { getBlinkClient } from '@/lib/blink';
 
 type Role = 'mhp' | 'chw' | 'family' | 'admin';
 
@@ -51,6 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, role: Role) => {
     setIsLoading(true);
     try {
+      const blink = getBlinkClient();
+      if (!blink) {
+        throw new Error('Blink client is unavailable');
+      }
+
       // Fetch user from DB based on email and role
       const users = await blink.db.users.list({
         where: { email, role },

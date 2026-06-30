@@ -16,7 +16,11 @@ const resources = {
  * Persist the selected language to AsyncStorage whenever it changes.
  */
 i18n.on('languageChanged', (lng: string) => {
-  AsyncStorage.setItem(LANGUAGE_KEY, lng).catch(() => {});
+  try {
+    AsyncStorage.setItem(LANGUAGE_KEY, lng).catch(() => {});
+  } catch {
+    // ignore storage errors
+  }
 });
 
 /**
@@ -39,17 +43,21 @@ export async function loadPersistedLanguage(): Promise<void> {
   await i18n.changeLanguage(deviceLocale === 'rw' ? 'rw' : 'en');
 }
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    // Start with device locale; loadPersistedLanguage() will override this
-    // once AsyncStorage is ready (called from _layout.tsx).
-    lng: Localization.getLocales()[0]?.languageCode === 'rw' ? 'rw' : 'en',
-    fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+try {
+  i18n
+    .use(initReactI18next)
+    .init({
+      resources,
+      // Start with device locale; loadPersistedLanguage() will override this
+      // once AsyncStorage is ready (called from _layout.tsx).
+      lng: Localization.getLocales()[0]?.languageCode === 'rw' ? 'rw' : 'en',
+      fallbackLng: 'en',
+      interpolation: {
+        escapeValue: false,
+      },
+    });
+} catch {
+  // ignore init errors in non-React Native environments
+}
 
 export default i18n;

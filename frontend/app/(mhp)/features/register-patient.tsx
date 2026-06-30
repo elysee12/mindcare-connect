@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
-import Constants from 'expo-constants';
+import { getBackendUrl } from '@/config/backend';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -109,7 +109,7 @@ export default function RegisterPatient() {
     try {
       const formData = new FormData();
       formData.append('file', { uri, type: 'image/jpeg', name: `patient-${Date.now()}.jpg` } as any);
-      const backendUrl = Constants.expoConfig?.extra?.BACKEND_URL;
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/upload`, { method: 'POST', body: formData, headers: { 'x-user-id': currentUser?.id || '' } });
       if (!res.ok) throw new Error('Upload failed');
       return (await res.json()).url;
